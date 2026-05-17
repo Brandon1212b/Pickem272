@@ -17,7 +17,7 @@ export default function Login() {
       onSuccess: (user) => {
         setUser(user);
         toast.success("Welcome to the league!");
-        setLocation("/dashboard");
+        setLocation("/picks");
       },
       onError: () => {
         toast.error("Failed to login");

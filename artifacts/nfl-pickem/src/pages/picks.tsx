@@ -137,7 +137,7 @@ export default function Picks() {
         </Card>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-card p-4 rounded-xl border">
+      <div className="sticky top-0 z-20 flex flex-col md:flex-row justify-between items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4 rounded-xl border shadow-sm">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">The Grid</h1>
           <p className="text-muted-foreground">{totalPicks} of 288 picks made • {totalLocks} locks set</p>

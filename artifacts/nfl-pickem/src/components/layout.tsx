@@ -1,15 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { LogOut, LayoutDashboard, Grid, Trophy, Shield } from "lucide-react";
+import { LogOut, LayoutDashboard, Grid, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
+  useEffect(() => {
+    if (!user && location !== "/") {
+      setLocation("/");
+    }
+  }, [user, location, setLocation]);
+
   if (!user && location !== "/") {
-    return null; // Will redirect via useAuth or component
+    return null;
   }
 
   const navItems = [

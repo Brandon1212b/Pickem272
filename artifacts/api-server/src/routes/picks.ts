@@ -145,9 +145,18 @@ router.post("/picks/autofill", async (req, res) => {
     let assignedLockThisWeek = false;
     for (let i = 0; i < matches.length; i++) {
       const m = matches[i];
-      const team = mode === "random"
-        ? (Math.random() < 0.5 ? m.homeTeam : m.awayTeam)
-        : m.homeTeam;
+      let team: string;
+      if (mode === "random") {
+        team = Math.random() < 0.5 ? m.homeTeam : m.awayTeam;
+      } else if (mode === "favorites") {
+        // Negative spread = home team favored; positive or PK = away team favored
+        const spread = m.pointSpread ?? "";
+        const spreadNum = parseFloat(spread);
+        team = (!isNaN(spreadNum) && spreadNum < 0) ? m.homeTeam : m.awayTeam;
+      } else {
+        // home mode: always pick home team
+        team = m.homeTeam;
+      }
       // Assign lock to first unpicked match in this week if week not yet locked
       const isLock = !lockedWeeks.has(week) && !assignedLockThisWeek && i === 0;
       if (isLock) assignedLockThisWeek = true;

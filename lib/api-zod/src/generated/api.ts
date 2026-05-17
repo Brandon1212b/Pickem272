@@ -197,7 +197,7 @@ export const SavePicksResponse = zod.array(SavePicksResponseItem)
  */
 export const AutofillPicksBody = zod.object({
   "userId": zod.number(),
-  "mode": zod.enum(['favorites', 'random'])
+  "mode": zod.enum(['favorites', 'home', 'random'])
 })
 
 export const AutofillPicksResponseItem = zod.object({

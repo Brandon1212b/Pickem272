@@ -503,7 +503,7 @@ components:
           type: integer
         mode:
           type: string
-          enum: [favorites, random]
+          enum: [favorites, home, random]
 
     LeaderboardEntry:
       type: object

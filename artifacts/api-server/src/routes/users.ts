@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, picksTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginUserBody } from "@workspace/api-zod";
 
@@ -26,7 +26,6 @@ router.post("/users/login", async (req, res) => {
     return;
   }
 
-  // Assign a color not already taken
   const allUsers = await db.select({ avatar: usersTable.avatar }).from(usersTable);
   const takenColors = new Set(allUsers.map((u) => u.avatar).filter(Boolean));
   const available = PROFILE_COLORS.filter((c) => !takenColors.has(c));
@@ -76,6 +75,19 @@ router.patch("/users/:userId", async (req, res) => {
 
   const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, userId)).returning();
   res.json(serializeUser(updated));
+});
+
+router.delete("/users/:userId", async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  if (isNaN(userId)) { res.status(400).json({ error: "Invalid userId" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  await db.delete(picksTable).where(eq(picksTable.userId, userId));
+  await db.delete(usersTable).where(eq(usersTable.id, userId));
+
+  res.json({ success: true, userId, name: user.name });
 });
 
 export default router;

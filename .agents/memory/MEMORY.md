@@ -1,5 +1,10 @@
 - [Team logo ESPN mappings](team-logo-espn.md) — WAS maps to "wsh" in ESPN CDN; all others lowercase as-is
 - [Pick popularity API](pick-popularity-api.md) — returns active week only (lastCompleted+1); includes counts + picker names for icon stacks
-- [User avatar column](user-avatar.md) — stores hex color (#007AFF format); shows initials on circle; PATCH /users/:userId updates name and/or avatar
-- [Leaderboard schema additions](leaderboard-schema.md) — wrongPicks, weekHighScoreCount, weekLowScoreCount, avatar added to LeaderboardEntry; TrendEntry also has avatar
-- [Profile color palette](profile-colors.md) — 10 hex colors defined in users.ts and layout.tsx; new users auto-assigned unused color on join
+- [User avatar column](user-avatar.md) — stores hex color (#007AFF format); shows initials on circle; PATCH /users/:userId updates avatar only (display name editing removed)
+- [Leaderboard schema](leaderboard-schema.md) — wrongPicks, weekHighScoreCount, weekLowScoreCount, avatar on LeaderboardEntry; Against the Grain and The Cellar badges removed
+- [Profile color palette](profile-colors.md) — 10 hex colors in users.ts + layout.tsx; auto-assigned on join; color picker only (no rename)
+- [Picks lock flow](picks-lock-flow.md) — auto-locks localStorage after all 288 submitted; locked view shows week-by-week logos + correct/wrong rings; unlock button in pre-season
+- [Scoring is 1pt flat](scoring-flat.md) — lock of the week concept fully removed; every correct pick = 1pt, no isLock bonus; isLock field stays in DB but always saved as false
+- [Admin endpoints](admin-endpoints.md) — DELETE /api/admin/weeks/:week/results resets all match results + recalculates lastCompletedWeek; DELETE /api/users/:userId deletes user + their picks
+- [Scripts typecheck errors](scripts-typecheck.md) — pre-existing errors in scripts/src/seed-schedule.ts; not caused by app code; safe to ignore
+- [useListUsers hook](api-hooks-naming.md) — GET /api/users generates useListUsers + getListUsersQueryKey (not useGetUsers)

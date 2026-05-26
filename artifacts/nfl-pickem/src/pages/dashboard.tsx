@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
 import {
   useGetSeasonStatus,
   useListMatches,
@@ -17,12 +18,25 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { TeamLogo } from "@/lib/team-logos";
 import { getTeamColor } from "@/lib/team-colors";
 
-function PickerAvatars({ names, limit = 5 }: { names: string[]; limit?: number }) {
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function PickerAvatars({
+  names,
+  colorMap = {},
+  limit = 5,
+}: {
+  names: string[];
+  colorMap?: Record<string, string>;
+  limit?: number;
+}) {
   const shown = names.slice(0, limit);
   const extra = names.length - limit;
   return (
@@ -32,9 +46,10 @@ function PickerAvatars({ names, limit = 5 }: { names: string[]; limit?: number }
           <div
             key={i}
             title={name}
-            className="w-5 h-5 rounded-full bg-primary/20 border border-card flex items-center justify-center text-[8px] font-bold text-primary select-none shrink-0"
+            className="w-5 h-5 rounded-full border border-card flex items-center justify-center text-[8px] font-bold text-white select-none shrink-0"
+            style={{ backgroundColor: colorMap[name] ?? "#888888" }}
           >
-            {name[0]?.toUpperCase()}
+            {getInitials(name)}
           </div>
         ))}
         {extra > 0 && (
@@ -52,6 +67,7 @@ function PickerAvatars({ names, limit = 5 }: { names: string[]; limit?: number }
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [smackText, setSmackText] = useState("");
 
@@ -78,9 +94,18 @@ export default function Dashboard() {
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
   const activeWeek = (status?.lastCompletedWeek ?? 0) + 1;
 
-  // Team records: for each team, count how many times user picked them (wins) vs opponent (losses)
-  const teamRecords = useMemo(() => {
-    if (!allMatches || !picks) return {} as Record<string, { wins: number; losses: number }>;
+  // Map user names → their avatar color (for picker avatars)
+  const userColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const entry of leaderboard ?? []) {
+      map[entry.name] = entry.avatar ?? "#007AFF";
+    }
+    return map;
+  }, [leaderboard]);
+
+  // Team records: count wins/losses per team from user's picks
+  const teamRecordsSorted = useMemo(() => {
+    if (!allMatches || !picks) return [];
     const records: Record<string, { wins: number; losses: number }> = {};
     for (const match of allMatches) {
       const pick = picks.find((p) => p.matchId === match.id);
@@ -92,14 +117,10 @@ export default function Dashboard() {
       records[pickedTeam].wins += 1;
       records[otherTeam].losses += 1;
     }
-    return records;
-  }, [allMatches, picks]);
-
-  const teamRecordsSorted = useMemo(() => {
-    return Object.entries(teamRecords)
+    return Object.entries(records)
       .map(([team, rec]) => ({ team, ...rec }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-  }, [teamRecords]);
+  }, [allMatches, picks]);
 
   const handleSmackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +134,10 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="bg-primary text-primary-foreground border-none">
+        <Card
+          className="bg-primary text-primary-foreground border-none cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => setLocation("/leaderboard")}
+        >
           <CardContent className="p-4 flex flex-col">
             <p className="text-primary-foreground/70 text-xs font-medium">Rank</p>
             <h2 className="text-3xl font-bold">{userStats ? `#${userStats.rank}` : "—"}</h2>
@@ -151,55 +175,49 @@ export default function Dashboard() {
                 <div
                   key={pop.matchId}
                   className={`rounded-xl border p-3 space-y-2 ${
-                    userPickedTeam
-                      ? "border-primary/30 bg-primary/5"
-                      : "border-border bg-card"
+                    userPickedTeam ? "border-primary/30 bg-primary/5" : "border-border bg-card"
                   }`}
                 >
-                  {/* Game time */}
                   {pop.gameTime && (
                     <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       {pop.gameTime}
                     </div>
                   )}
 
-                  {/* Teams row */}
                   <div className="flex items-center gap-2">
-                    {/* Away */}
                     <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${userPickedAway ? "font-bold text-primary" : ""}`}>
                       <TeamLogo team={pop.awayTeam} size={20} />
                       <span className="text-sm truncate">{pop.awayTeam}</span>
-                      {userPickedAway && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ My Pick</span>}
+                      {userPickedAway && (
+                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓</span>
+                      )}
                     </div>
-
                     <span className="text-xs text-muted-foreground shrink-0">@</span>
-
-                    {/* Home */}
                     <div className={`flex items-center gap-1.5 flex-1 min-w-0 justify-end ${userPickedHome ? "font-bold text-primary" : ""}`}>
-                      {userPickedHome && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ My Pick</span>}
+                      {userPickedHome && (
+                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓</span>
+                      )}
                       <span className="text-sm truncate text-right">{pop.homeTeam}</span>
                       <TeamLogo team={pop.homeTeam} size={20} />
                     </div>
                   </div>
 
-                  {/* Picker avatars */}
                   <div className="flex items-center justify-between">
-                    <PickerAvatars names={pop.awayPickerNames} />
-                    <PickerAvatars names={pop.homePickerNames} />
+                    <PickerAvatars names={pop.awayPickerNames} colorMap={userColorMap} />
+                    <PickerAvatars names={pop.homePickerNames} colorMap={userColorMap} />
                   </div>
 
-                  {/* % bar with team colors */}
                   {(pop.awayPickCount + pop.homePickCount) > 0 ? (
                     <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex">
                       {pop.awayPickCount > 0 && (
                         <div
-                          className="h-full rounded-l-full transition-all"
+                          className="h-full rounded-l-full"
                           style={{ width: `${pop.awayPickPct}%`, backgroundColor: getTeamColor(pop.awayTeam) }}
                         />
                       )}
                       {pop.homePickCount > 0 && (
                         <div
-                          className="h-full rounded-r-full transition-all"
+                          className="h-full rounded-r-full"
                           style={{ width: `${pop.homePickPct}%`, backgroundColor: getTeamColor(pop.homeTeam) }}
                         />
                       )}
@@ -208,7 +226,6 @@ export default function Dashboard() {
                     <div className="h-2 w-full bg-secondary rounded-full" />
                   )}
 
-                  {/* Percentages */}
                   <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                     <span>{pop.awayPickPct}%</span>
                     <span>{pop.homePickPct}%</span>

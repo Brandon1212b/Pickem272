@@ -25,15 +25,12 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
 
   const matchPicks = await db.select().from(picksTable).where(eq(picksTable.matchId, matchId));
   for (const pick of matchPicks) {
-    let points = 0;
-    if (pick.selectedTeam === winner) {
-      points = pick.isLock ? 2 : 1;
-    }
+    const points = pick.selectedTeam === winner ? 1 : 0;
     await db.update(picksTable).set({ pointsEarned: points }).where(eq(picksTable.id, pick.id));
   }
 
-  const allCompleted = await db.select().from(matchesTable);
-  const completedWeeks = [...new Set(allCompleted.filter((m) => m.isCompleted).map((m) => m.week))];
+  const allMatches = await db.select().from(matchesTable);
+  const completedWeeks = [...new Set(allMatches.filter((m) => m.isCompleted).map((m) => m.week))];
   const lastCompletedWeek = completedWeeks.length > 0 ? Math.max(...completedWeeks) : 0;
   const [cfg] = await db.select().from(seasonConfigTable).limit(1);
   if (cfg) {
@@ -51,6 +48,33 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
     injuryWeatherFlags: updated.injuryWeatherFlags ?? null,
     gameTime: updated.gameTime ?? null,
   });
+});
+
+// Reset all results for a week
+router.delete("/admin/weeks/:week/results", async (req, res) => {
+  const week = parseInt(req.params.week, 10);
+  if (isNaN(week)) { res.status(400).json({ error: "Invalid week" }); return; }
+
+  const weekMatches = await db.select().from(matchesTable).where(eq(matchesTable.week, week));
+  if (weekMatches.length === 0) { res.status(404).json({ error: "Week not found" }); return; }
+
+  await db.update(matchesTable)
+    .set({ winner: null, isCompleted: false })
+    .where(eq(matchesTable.week, week));
+
+  for (const m of weekMatches) {
+    await db.update(picksTable).set({ pointsEarned: 0 }).where(eq(picksTable.matchId, m.id));
+  }
+
+  const allMatches = await db.select().from(matchesTable);
+  const completedWeeks = [...new Set(allMatches.filter((m) => m.isCompleted).map((m) => m.week))];
+  const lastCompletedWeek = completedWeeks.length > 0 ? Math.max(...completedWeeks) : 0;
+  const [cfg] = await db.select().from(seasonConfigTable).limit(1);
+  if (cfg) {
+    await db.update(seasonConfigTable).set({ lastCompletedWeek }).where(eq(seasonConfigTable.id, cfg.id));
+  }
+
+  res.json({ success: true, week, matchesReset: weekMatches.length });
 });
 
 router.post("/admin/webhook", async (req, res) => {
@@ -91,7 +115,6 @@ router.patch("/admin/season", async (req, res) => {
   });
 });
 
-// Live NFL scores proxy — fetches current week scoreboard from ESPN (no API key needed)
 router.get("/admin/live-scores", async (_req, res) => {
   try {
     const espnRes = await fetch(
@@ -103,7 +126,6 @@ router.get("/admin/live-scores", async (_req, res) => {
       return;
     }
     const data = await espnRes.json() as any;
-    // Parse ESPN scoreboard into simple format
     const events = (data.events ?? []) as any[];
     const games = events.map((event: any) => {
       const competition = event.competitions?.[0];

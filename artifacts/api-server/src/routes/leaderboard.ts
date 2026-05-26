@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, usersTable, picksTable, matchesTable, seasonConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -15,14 +14,7 @@ router.get("/leaderboard", async (_req, res) => {
   const lastWeekMatches = completedMatches.filter((m) => m.week === lastWeek);
   const lastWeekMatchIds = new Set(lastWeekMatches.map((m) => m.id));
 
-  // Badge: against the grain — pick pick counts
-  const matchPickCounts: Record<number, Record<string, number>> = {};
-  for (const p of picks) {
-    if (!matchPickCounts[p.matchId]) matchPickCounts[p.matchId] = {};
-    matchPickCounts[p.matchId][p.selectedTeam] = (matchPickCounts[p.matchId][p.selectedTeam] ?? 0) + 1;
-  }
-
-  // Compute per-week high score counts
+  // Compute per-week high/low score counts
   const completedWeeks = [...new Set(completedMatches.map((m) => m.week))].sort((a, b) => a - b);
   const weekHighScoreCounts: Record<number, number> = {};
   const weekLowScoreCounts: Record<number, number> = {};
@@ -30,21 +22,17 @@ router.get("/leaderboard", async (_req, res) => {
   for (const week of completedWeeks) {
     const weekMatchIds = new Set(completedMatches.filter((m) => m.week === week).map((m) => m.id));
     const weekScores = users.map((u) => {
-      const weekPicks = picks.filter((p) => p.userId === u.id && weekMatchIds.has(p.matchId));
-      const points = weekPicks.reduce((s, p) => s + p.pointsEarned, 0);
-      return { userId: u.id, points };
+      const pts = picks.filter((p) => p.userId === u.id && weekMatchIds.has(p.matchId))
+        .reduce((s, p) => s + p.pointsEarned, 0);
+      return { userId: u.id, pts };
     });
     if (weekScores.length === 0) continue;
-    const maxPts = Math.max(...weekScores.map((s) => s.points));
-    const minPts = Math.min(...weekScores.map((s) => s.points));
+    const maxPts = Math.max(...weekScores.map((s) => s.pts));
+    const minPts = Math.min(...weekScores.map((s) => s.pts));
     if (maxPts > 0) {
       for (const s of weekScores) {
-        if (s.points === maxPts) {
-          weekHighScoreCounts[s.userId] = (weekHighScoreCounts[s.userId] ?? 0) + 1;
-        }
-        if (s.points === minPts) {
-          weekLowScoreCounts[s.userId] = (weekLowScoreCounts[s.userId] ?? 0) + 1;
-        }
+        if (s.pts === maxPts) weekHighScoreCounts[s.userId] = (weekHighScoreCounts[s.userId] ?? 0) + 1;
+        if (s.pts === minPts) weekLowScoreCounts[s.userId] = (weekLowScoreCounts[s.userId] ?? 0) + 1;
       }
     }
   }
@@ -72,17 +60,6 @@ router.get("/leaderboard", async (_req, res) => {
       badges.push("Perfect Week");
     }
 
-    // Against the Grain
-    const agPick = resolvedPicks.some((p) => {
-      const m = completedMatches.find((m) => m.id === p.matchId);
-      if (!m || p.selectedTeam !== m.winner) return false;
-      const counts = matchPickCounts[p.matchId] ?? {};
-      const total = Object.values(counts).reduce((s, v) => s + v, 0) || 1;
-      const pct = (counts[p.selectedTeam] ?? 0) / total;
-      return pct < 0.15;
-    });
-    if (agPick) badges.push("Against the Grain");
-
     return {
       userId: u.id,
       name: u.name,
@@ -100,14 +77,8 @@ router.get("/leaderboard", async (_req, res) => {
   entries.sort((a, b) => b.totalPoints - a.totalPoints);
 
   const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
-  if (ranked.length > 0) {
-    const minPoints = Math.min(...ranked.map((e) => e.totalPoints));
-    for (const e of ranked) {
-      if (e.totalPoints === minPoints && !e.badges.includes("The Cellar")) {
-        e.badges.push("The Cellar");
-      }
-    }
-    if (ranked[0] && !ranked[0].badges.includes("League Leader")) ranked[0].badges.push("League Leader");
+  if (ranked.length > 0 && ranked[0] && !ranked[0].badges.includes("League Leader")) {
+    ranked[0].badges.push("League Leader");
   }
 
   res.json(ranked);
@@ -156,7 +127,7 @@ router.get("/leaderboard/weekly-extremes", async (_req, res) => {
     const weekPicks = picks.filter((p) => p.userId === u.id && lastWeekMatchIds.has(p.matchId));
     const points = weekPicks.reduce((s, p) => s + p.pointsEarned, 0);
     return { userId: u.id, name: u.name, points };
-  }).filter((s) => s.points > 0 || picks.some((p) => p.userId === s.userId && lastWeekMatchIds.has(p.matchId)));
+  }).filter((s) => picks.some((p) => p.userId === s.userId && lastWeekMatchIds.has(p.matchId)));
 
   if (scores.length === 0) {
     res.json({ week: lastWeek, topUsers: [], bottomUsers: [] });

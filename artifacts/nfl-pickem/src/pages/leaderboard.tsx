@@ -16,17 +16,14 @@ const FALLBACK_COLORS = [
 ];
 
 const BADGE_KEY = [
-  { emoji: "👑", name: "League Leader", desc: "Currently #1 in points" },
-  { emoji: "🏆", name: "Perfect Week", desc: "Picked every game right in a week" },
-  { emoji: "⚡", name: "Against the Grain", desc: "Won a pick that <15% of the league made" },
-  { emoji: "🪣", name: "The Cellar", desc: "Currently lowest points in the league" },
+  { emoji: "👑", name: "League Leader", desc: "Currently #1 in total points" },
+  { emoji: "🏆", name: "Perfect Week", desc: "Picked every game correctly in a completed week" },
   { emoji: "🔥", name: "Week High Score", desc: "One per week you had the top score" },
+  { emoji: "💩", name: "Week Low Score", desc: "One per week you had the lowest score" },
 ];
 
 function badgeEmoji(b: string): string {
   if (b === "Perfect Week") return "🏆";
-  if (b === "The Cellar") return "🪣";
-  if (b === "Against the Grain") return "⚡";
   if (b === "League Leader") return "👑";
   return "";
 }
@@ -35,7 +32,6 @@ export default function Leaderboard() {
   const { data: leaderboard, isLoading: loadingBoard } = useGetLeaderboard();
   const { data: trends, isLoading: loadingTrends } = useGetLeaderboardTrends();
   const { data: extremes, isLoading: loadingExtremes } = useGetWeeklyExtremes();
-  const { data: status } = useGetSeasonStatus();
 
   if (loadingBoard || loadingTrends || loadingExtremes) {
     return (
@@ -46,7 +42,6 @@ export default function Leaderboard() {
     );
   }
 
-  // Build chart data
   const chartData: Record<string, string | number>[] = [];
   if (trends && trends.length > 0) {
     const numWeeks = trends[0].weeklyPoints.length;
@@ -57,7 +52,6 @@ export default function Leaderboard() {
     }
   }
 
-  // Get user color from leaderboard (avatar) or fallback
   const getUserColor = (userId: number, idx: number): string => {
     const entry = leaderboard?.find((e) => e.userId === userId);
     return entry?.avatar ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
@@ -90,11 +84,16 @@ export default function Leaderboard() {
                 <TableRow key={entry.userId}>
                   <TableCell className="font-bold text-lg">{entry.rank}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <span className="font-semibold">{entry.name}</span>
                       {entry.weekHighScoreCount > 0 && (
-                        <span title={`Week high score ${entry.weekHighScoreCount}x`} className="text-base leading-none">
-                          {"🔥".repeat(Math.min(entry.weekHighScoreCount, 8))}
+                        <span title={`Week high score ${entry.weekHighScoreCount}x`}>
+                          {"🔥".repeat(Math.min(entry.weekHighScoreCount, 10))}
+                        </span>
+                      )}
+                      {entry.weekLowScoreCount > 0 && (
+                        <span title={`Week low score ${entry.weekLowScoreCount}x`}>
+                          {"💩".repeat(Math.min(entry.weekLowScoreCount, 10))}
                         </span>
                       )}
                       <span className="inline-flex gap-0.5">
@@ -166,7 +165,7 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Season Trajectory chart */}
+      {/* Season Trajectory */}
       {chartData.length > 0 && (
         <Card>
           <CardHeader>

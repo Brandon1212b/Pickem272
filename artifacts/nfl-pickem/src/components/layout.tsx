@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   useGetLeaderboard,
   useGetSeasonStatus,
@@ -85,7 +83,6 @@ function NavStats({ userId }: { userId: number }) {
 function ProfileButton() {
   const { user, setUser, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [editName, setEditName] = useState(user?.name ?? "");
   const [, setLocation] = useLocation();
 
   const updateUser = useUpdateUser({
@@ -101,12 +98,6 @@ function ProfileButton() {
 
   const avatarColor = user.avatar ?? "#007AFF";
 
-  const handleSaveName = () => {
-    const trimmed = editName.trim();
-    if (!trimmed || trimmed === user.name) { setOpen(false); return; }
-    updateUser.mutate({ userId: user.id, data: { name: trimmed } });
-  };
-
   const handleSetColor = (color: string) => {
     updateUser.mutate({ userId: user.id, data: { avatar: color } });
     setUser({ ...user, avatar: color });
@@ -121,7 +112,7 @@ function ProfileButton() {
           <UserAvatar name={user.name} color={avatarColor} size="sm" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-4 space-y-4">
+      <PopoverContent align="end" className="w-64 p-4 space-y-4">
         <div className="text-center">
           <div className="flex justify-center mb-2">
             <UserAvatar name={user.name} color={avatarColor} size="lg" />
@@ -143,29 +134,6 @@ function ProfileButton() {
                 title={color}
               />
             ))}
-          </div>
-        </div>
-
-        {/* Rename */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Display name</p>
-          <div className="flex gap-2">
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder="Your name"
-              className="h-8 text-sm"
-              onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-              maxLength={32}
-            />
-            <Button
-              size="sm"
-              className="h-8 shrink-0"
-              onClick={handleSaveName}
-              disabled={!editName.trim() || updateUser.isPending}
-            >
-              Save
-            </Button>
           </div>
         </div>
 

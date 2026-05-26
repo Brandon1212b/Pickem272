@@ -70,22 +70,8 @@ router.post("/picks/save", async (req, res) => {
   if (locked) { res.status(403).json({ error: "Season has started, picks are locked" }); return; }
   const { userId, picks } = parsed.data;
 
-  // Validate: at most one lock per week
   const allMatches = await db.select().from(matchesTable);
   const matchMap = Object.fromEntries(allMatches.map((m) => [m.id, m]));
-
-  const locksByWeek: Record<number, number> = {};
-  for (const p of picks) {
-    const match = matchMap[p.matchId];
-    if (!match) continue;
-    if (p.isLock) {
-      locksByWeek[match.week] = (locksByWeek[match.week] ?? 0) + 1;
-      if (locksByWeek[match.week] > 1) {
-        res.status(400).json({ error: `Week ${match.week} has more than one lock` });
-        return;
-      }
-    }
-  }
 
   const results: (typeof picksTable.$inferSelect)[] = [];
   for (const p of picks) {
@@ -97,14 +83,14 @@ router.post("/picks/save", async (req, res) => {
     if (existing.length > 0) {
       const [updated] = await db
         .update(picksTable)
-        .set({ selectedTeam: p.selectedTeam, isLock: p.isLock })
+        .set({ selectedTeam: p.selectedTeam, isLock: false })
         .where(eq(picksTable.id, existing[0].id))
         .returning();
       results.push(updated);
     } else {
       const [inserted] = await db
         .insert(picksTable)
-        .values({ userId, matchId: p.matchId, selectedTeam: p.selectedTeam, isLock: p.isLock, pointsEarned: 0 })
+        .values({ userId, matchId: p.matchId, selectedTeam: p.selectedTeam, isLock: false, pointsEarned: 0 })
         .returning();
       results.push(inserted);
     }
@@ -123,45 +109,19 @@ router.post("/picks/autofill", async (req, res) => {
   const pickedMatchIds = new Set(existingPicks.map((p) => p.matchId));
   const unpickedMatches = allMatches.filter((m) => !pickedMatchIds.has(m.id));
 
-  // Group by week to assign lock (one per week that has no lock yet)
-  const lockedWeeks = new Set<number>();
-  for (const p of existingPicks) {
-    if (p.isLock) {
-      const match = allMatches.find((m) => m.id === p.matchId);
-      if (match) lockedWeeks.add(match.week);
-    }
-  }
-
-  // Group unpicked by week
-  const byWeek: Record<number, typeof allMatches> = {};
-  for (const m of unpickedMatches) {
-    if (!byWeek[m.week]) byWeek[m.week] = [];
-    byWeek[m.week].push(m);
-  }
-
   const newPicks: (typeof picksTable.$inferInsert & { matchId: number })[] = [];
-  for (const [weekStr, matches] of Object.entries(byWeek)) {
-    const week = parseInt(weekStr, 10);
-    let assignedLockThisWeek = false;
-    for (let i = 0; i < matches.length; i++) {
-      const m = matches[i];
-      let team: string;
-      if (mode === "random") {
-        team = Math.random() < 0.5 ? m.homeTeam : m.awayTeam;
-      } else if (mode === "favorites") {
-        // Negative spread = home team favored; positive or PK = away team favored
-        const spread = m.pointSpread ?? "";
-        const spreadNum = parseFloat(spread);
-        team = (!isNaN(spreadNum) && spreadNum < 0) ? m.homeTeam : m.awayTeam;
-      } else {
-        // home mode: always pick home team
-        team = m.homeTeam;
-      }
-      // Assign lock to first unpicked match in this week if week not yet locked
-      const isLock = !lockedWeeks.has(week) && !assignedLockThisWeek && i === 0;
-      if (isLock) assignedLockThisWeek = true;
-      newPicks.push({ userId, matchId: m.id, selectedTeam: team, isLock, pointsEarned: 0 });
+  for (const m of unpickedMatches) {
+    let team: string;
+    if (mode === "random") {
+      team = Math.random() < 0.5 ? m.homeTeam : m.awayTeam;
+    } else if (mode === "favorites") {
+      const spread = m.pointSpread ?? "";
+      const spreadNum = parseFloat(spread);
+      team = (!isNaN(spreadNum) && spreadNum < 0) ? m.homeTeam : m.awayTeam;
+    } else {
+      team = m.homeTeam;
     }
+    newPicks.push({ userId, matchId: m.id, selectedTeam: team, isLock: false, pointsEarned: 0 });
   }
 
   const results: (typeof picksTable.$inferSelect)[] = [];

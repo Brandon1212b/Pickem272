@@ -12,7 +12,19 @@ export interface HealthStatus {
 export interface User {
   id: number;
   name: string;
+  /** @nullable */
+  avatar?: string | null;
   createdAt: string;
+}
+
+export interface UserUpdateInput {
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  name?: string;
+  /** @nullable */
+  avatar?: string | null;
 }
 
 export interface UserLogin {
@@ -106,6 +118,10 @@ export interface PickPopularity {
   awayTeam: string;
   homePickPct: number;
   awayPickPct: number;
+  homePickCount: number;
+  awayPickCount: number;
+  homePickerNames: string[];
+  awayPickerNames: string[];
 }
 
 export type SeasonStatusMode = typeof SeasonStatusMode[keyof typeof SeasonStatusMode];

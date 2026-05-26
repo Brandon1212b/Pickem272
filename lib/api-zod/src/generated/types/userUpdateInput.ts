@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface User {
-  id: number;
-  name: string;
+export interface UserUpdateInput {
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  name?: string;
   /** @nullable */
   avatar?: string | null;
-  createdAt: string;
 }

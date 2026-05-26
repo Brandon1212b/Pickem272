@@ -97,6 +97,31 @@ paths:
                 $ref: "#/components/schemas/User"
         "404":
           description: Not found
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user profile (name and/or avatar)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateInput"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
 
   # ── Matches ────────────────────────────────────────────────────────────────
   /matches:
@@ -420,8 +445,20 @@ components:
           type: integer
         name:
           type: string
+        avatar:
+          type: ["string", "null"]
         createdAt:
           type: string
+
+    UserUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 32
+        avatar:
+          type: ["string", "null"]
 
     UserLogin:
       type: object
@@ -567,7 +604,7 @@ components:
 
     PickPopularity:
       type: object
-      required: [matchId, homeTeam, awayTeam, homePickPct, awayPickPct, week]
+      required: [matchId, homeTeam, awayTeam, homePickPct, awayPickPct, homePickCount, awayPickCount, homePickerNames, awayPickerNames, week]
       properties:
         matchId:
           type: integer
@@ -581,6 +618,18 @@ components:
           type: number
         awayPickPct:
           type: number
+        homePickCount:
+          type: integer
+        awayPickCount:
+          type: integer
+        homePickerNames:
+          type: array
+          items:
+            type: string
+        awayPickerNames:
+          type: array
+          items:
+            type: string
 
     SeasonStatus:
       type: object

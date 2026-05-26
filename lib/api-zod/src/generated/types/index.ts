@@ -26,6 +26,7 @@ export * from './smackMessageInput';
 export * from './trendEntry';
 export * from './user';
 export * from './userLogin';
+export * from './userUpdateInput';
 export * from './webhookInput';
 export * from './webhookResult';
 export * from './weeklyExtremes';

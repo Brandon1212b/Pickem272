@@ -1,0 +1,3 @@
+- [Team logo ESPN mappings](team-logo-espn.md) — WAS maps to "wsh" in ESPN CDN; all others lowercase as-is
+- [Pick popularity API](pick-popularity-api.md) — returns active week only (lastCompleted+1); includes counts + picker names for icon stacks
+- [User avatar column](user-avatar.md) — nullable text column added to users table; stored as emoji string; PATCH /users/:userId updates name and/or avatar

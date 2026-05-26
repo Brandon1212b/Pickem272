@@ -13,4 +13,8 @@ export interface PickPopularity {
   awayTeam: string;
   homePickPct: number;
   awayPickPct: number;
+  homePickCount: number;
+  awayPickCount: number;
+  homePickerNames: string[];
+  awayPickerNames: string[];
 }

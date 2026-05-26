@@ -10,7 +10,6 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,7 +24,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Lock, Save, Shuffle, Wand2, Star } from "lucide-react";
+import { Lock, Save, Shuffle, Wand2, Star, RotateCcw, CheckCircle2 } from "lucide-react";
+import { TeamLogo } from "@/lib/team-logos";
 
 type AutofillMode = "home" | "favorites" | "random";
 
@@ -34,6 +34,15 @@ const AUTOFILL_OPTIONS: { mode: AutofillMode; label: string; icon: React.Element
   { mode: "favorites", label: "Favorites", icon: Star, description: "Pick the spread favorite for every game you haven't picked yet." },
   { mode: "random", label: "Random", icon: Shuffle, description: "Randomly pick a winner for every game you haven't picked yet." },
 ];
+
+function getTeamSpread(pointSpread: string | null | undefined, team: "home" | "away"): string | null {
+  if (!pointSpread) return null;
+  const num = parseFloat(pointSpread);
+  if (isNaN(num) || num === 0) return num === 0 ? "PK" : null;
+  // pointSpread is home team's spread (negative = home favored)
+  const val = team === "home" ? num : -num;
+  return val > 0 ? `+${val}` : `${val}`;
+}
 
 export default function Picks() {
   const { user } = useAuth();
@@ -78,7 +87,6 @@ export default function Picks() {
     mutation: {
       onSuccess: (newPicks) => {
         toast.success("Picks filled in!");
-        // Merge returned picks directly into local state
         setLocalPicks((prev) => {
           const merged = { ...prev };
           for (const p of newPicks) {
@@ -93,12 +101,17 @@ export default function Picks() {
     },
   });
 
-  const handlePick = (matchId: number, team: string, week: number) => {
+  // Toggle pick: click selected team again to deselect
+  const handlePick = (matchId: number, team: string, weekNum: number) => {
     if (status?.mode === "in-season") return;
-    setLocalPicks((prev) => ({
-      ...prev,
-      [matchId]: { selectedTeam: team, isLock: prev[matchId]?.isLock || false },
-    }));
+    setLocalPicks((prev) => {
+      const current = prev[matchId];
+      if (current?.selectedTeam === team) {
+        // Unselect
+        return { ...prev, [matchId]: { selectedTeam: "", isLock: false } };
+      }
+      return { ...prev, [matchId]: { selectedTeam: team, isLock: current?.isLock || false } };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -118,6 +131,11 @@ export default function Picks() {
     setHasUnsavedChanges(true);
   };
 
+  const handleReset = () => {
+    setLocalPicks({});
+    setHasUnsavedChanges(true);
+  };
+
   const handleSave = () => {
     if (!user) return;
     const picksArray = Object.entries(localPicks)
@@ -132,15 +150,16 @@ export default function Picks() {
     setPendingAutofill(null);
   };
 
+  type MatchList = NonNullable<typeof matches>;
   const matchesByWeek = useMemo(() => {
-    if (!matches) return {} as Record<number, typeof matches>;
+    if (!matches) return {} as Record<number, MatchList>;
     return matches.reduce(
       (acc, m) => {
         if (!acc[m.week]) acc[m.week] = [];
         acc[m.week].push(m);
         return acc;
       },
-      {} as Record<number, typeof matches>
+      {} as Record<number, MatchList>
     );
   }, [matches]);
 
@@ -153,30 +172,45 @@ export default function Picks() {
     );
   }
 
+  const totalMatches = matches?.length ?? 288;
   const totalPicks = Object.values(localPicks).filter((p) => p.selectedTeam).length;
   const totalLocks = Object.values(localPicks).filter((p) => p.isLock).length;
-  const unpickedCount = (matches?.length ?? 288) - totalPicks;
+  const unpickedCount = totalMatches - totalPicks;
+  const allPicked = totalPicks === totalMatches;
 
   const pendingOption = AUTOFILL_OPTIONS.find((o) => o.mode === pendingAutofill);
 
   return (
-    <div className="space-y-4 pb-24">
-      {/* Sticky progress bar — sits below the fixed app header (h-16 = top-16) */}
+    <div className="space-y-4 pb-28">
+      {/* Sticky progress bar */}
       <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b shadow-sm">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
           <div>
-            <h1 className="text-xl font-bold tracking-tight leading-none">The Grid</h1>
+            <h1 className="text-xl font-bold tracking-tight leading-none">Picks</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {totalPicks} of 288 picks made &bull; {totalLocks} locks set
+              {totalPicks} of {totalMatches} picks &bull; {totalLocks} locks
             </p>
           </div>
-          {status?.mode === "in-season" && (
-            <Badge variant="destructive" className="text-xs">Season Locked</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {status?.mode === "in-season" ? (
+              <Badge variant="destructive" className="text-xs">Season Locked</Badge>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full h-8 px-3 text-xs"
+                onClick={handleReset}
+                disabled={totalPicks === 0}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Autofill buttons — not sticky */}
+      {/* Autofill buttons */}
       {status?.mode === "pre-season" && (
         <div className="flex gap-2 flex-wrap">
           {AUTOFILL_OPTIONS.map(({ mode, label, icon: Icon }) => (
@@ -191,9 +225,6 @@ export default function Picks() {
               {label}
             </Button>
           ))}
-          {unpickedCount === 0 && (
-            <span className="text-xs text-muted-foreground self-center">All games picked</span>
-          )}
         </div>
       )}
 
@@ -201,7 +232,7 @@ export default function Picks() {
       <Accordion type="multiple" defaultValue={["1"]} className="space-y-3">
         {Object.entries(matchesByWeek).map(([week, weekMatches]) => {
           const weekNum = Number(week);
-          const weekPicks = weekMatches.filter((m) => localPicks[m.id]?.selectedTeam).length;
+          const weekPickCount = weekMatches.filter((m) => localPicks[m.id]?.selectedTeam).length;
           const weekLock = weekMatches.find((m) => localPicks[m.id]?.isLock);
 
           return (
@@ -210,11 +241,9 @@ export default function Picks() {
                 <div className="flex items-center justify-between w-full pr-4">
                   <span className="font-semibold text-base">Week {week}</span>
                   <div className="flex items-center gap-2">
-                    {weekLock && (
-                      <Lock className="w-3.5 h-3.5 text-primary fill-primary/30" />
-                    )}
+                    {weekLock && <Lock className="w-3.5 h-3.5 text-primary fill-primary/30" />}
                     <span className="text-sm text-muted-foreground font-normal">
-                      {weekPicks}/{weekMatches.length}
+                      {weekPickCount}/{weekMatches.length}
                     </span>
                   </div>
                 </div>
@@ -223,46 +252,68 @@ export default function Picks() {
                 <div className="space-y-2 pt-2">
                   {weekMatches.map((match) => {
                     const pick = localPicks[match.id];
+                    const awaySpread = getTeamSpread(match.pointSpread, "away");
+                    const homeSpread = getTeamSpread(match.pointSpread, "home");
+                    const awayPicked = pick?.selectedTeam === match.awayTeam;
+                    const homePicked = pick?.selectedTeam === match.homeTeam;
+
                     return (
-                      <div key={match.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-secondary/30 border">
+                      <div key={match.id} className="flex items-center gap-2 p-2 rounded-xl bg-secondary/20 border">
+                        {/* Game time label */}
+                        {match.gameTime && (
+                          <div className="hidden sm:flex w-20 shrink-0 text-[10px] text-muted-foreground font-medium leading-tight text-center flex-col items-center">
+                            {match.gameTime.split(" ").map((part, i) => (
+                              <span key={i}>{part}</span>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="flex-1 grid grid-cols-2 gap-2">
+                          {/* Away team button */}
                           <Button
-                            variant={pick?.selectedTeam === match.awayTeam ? "default" : "outline"}
-                            className="h-11 text-sm font-medium justify-between px-3"
+                            variant={awayPicked ? "default" : "outline"}
+                            className="h-12 text-sm font-medium justify-start px-2.5 gap-2 relative"
                             onClick={() => handlePick(match.id, match.awayTeam, weekNum)}
                             disabled={status?.mode === "in-season"}
                           >
-                            <span>{match.awayTeam}</span>
-                            <span className="text-[10px] opacity-60">AWAY</span>
+                            <TeamLogo team={match.awayTeam} size={24} className="shrink-0" />
+                            <span className="truncate font-semibold">{match.awayTeam}</span>
+                            {awaySpread && (
+                              <span className={`ml-auto text-[10px] font-mono shrink-0 ${awayPicked ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                {awaySpread}
+                              </span>
+                            )}
                           </Button>
+
+                          {/* Home team button */}
                           <Button
-                            variant={pick?.selectedTeam === match.homeTeam ? "default" : "outline"}
-                            className="h-11 text-sm font-medium justify-between px-3"
+                            variant={homePicked ? "default" : "outline"}
+                            className="h-12 text-sm font-medium justify-start px-2.5 gap-2 relative"
                             onClick={() => handlePick(match.id, match.homeTeam, weekNum)}
                             disabled={status?.mode === "in-season"}
                           >
-                            <span>{match.homeTeam}</span>
-                            <span className="text-[10px] opacity-60">HOME</span>
+                            <TeamLogo team={match.homeTeam} size={24} className="shrink-0" />
+                            <span className="truncate font-semibold">{match.homeTeam}</span>
+                            {homeSpread && (
+                              <span className={`ml-auto text-[10px] font-mono shrink-0 ${homePicked ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                {homeSpread}
+                              </span>
+                            )}
                           </Button>
                         </div>
-                        <div className="flex flex-col items-center w-10 gap-1 shrink-0">
+
+                        {/* Lock button */}
+                        <div className="flex flex-col items-center w-8 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
                             className={`rounded-full h-8 w-8 ${pick?.isLock ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
                             onClick={() => handleLock(match.id, weekNum)}
-                            disabled={status?.mode === "in-season"}
+                            disabled={status?.mode === "in-season" || !pick?.selectedTeam}
+                            title="Set as Lock of the Week (2pts if correct)"
                           >
                             <Lock className={`w-4 h-4 ${pick?.isLock ? "fill-current" : ""}`} />
                           </Button>
-                          {match.pointSpread && (
-                            <Badge variant="secondary" className="text-[9px] px-1 font-mono">
-                              {match.pointSpread}
-                            </Badge>
-                          )}
-                          {match.injuryWeatherFlags && (
-                            <span className="text-xs leading-none">{match.injuryWeatherFlags}</span>
-                          )}
                         </div>
                       </div>
                     );
@@ -274,18 +325,35 @@ export default function Picks() {
         })}
       </Accordion>
 
-      {/* Floating save button */}
-      {status?.mode === "pre-season" && hasUnsavedChanges && (
-        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50">
-          <Button
-            size="lg"
-            className="rounded-full shadow-xl h-14 px-6 text-base"
-            onClick={handleSave}
-            disabled={savePicks.isPending}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {savePicks.isPending ? "Saving…" : "Save Picks"}
-          </Button>
+      {/* Floating action buttons */}
+      {status?.mode === "pre-season" && (
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 flex flex-col gap-3 items-end">
+          {allPicked && !hasUnsavedChanges && (
+            <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 rounded-full px-4 py-2 text-sm font-medium shadow">
+              <CheckCircle2 className="w-4 h-4" />
+              All {totalMatches} picks submitted!
+            </div>
+          )}
+          {hasUnsavedChanges && (
+            <Button
+              size="lg"
+              className={`rounded-full shadow-xl h-14 px-6 text-base ${allPicked ? "bg-green-600 hover:bg-green-700" : ""}`}
+              onClick={handleSave}
+              disabled={savePicks.isPending}
+            >
+              {allPicked ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  {savePicks.isPending ? "Submitting…" : "Submit All Picks"}
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5 mr-2" />
+                  {savePicks.isPending ? "Saving…" : "Save Picks"}
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
 

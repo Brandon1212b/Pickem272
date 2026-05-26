@@ -29,6 +29,7 @@ export const LoginUserBody = zod.object({
 export const LoginUserResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "avatar": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -39,6 +40,7 @@ export const LoginUserResponse = zod.object({
 export const ListUsersResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "avatar": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListUsersResponse = zod.array(ListUsersResponseItem)
@@ -54,6 +56,31 @@ export const GetUserParams = zod.object({
 export const GetUserResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "avatar": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update user profile (name and/or avatar)
+ */
+export const UpdateUserParams = zod.object({
+  "userId": zod.coerce.number()
+})
+
+export const updateUserBodyNameMax = 32;
+
+
+
+export const UpdateUserBody = zod.object({
+  "name": zod.string().min(1).max(updateUserBodyNameMax).optional(),
+  "avatar": zod.string().nullish()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "avatar": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -275,7 +302,11 @@ export const GetPickPopularityResponseItem = zod.object({
   "homeTeam": zod.string(),
   "awayTeam": zod.string(),
   "homePickPct": zod.number(),
-  "awayPickPct": zod.number()
+  "awayPickPct": zod.number(),
+  "homePickCount": zod.number(),
+  "awayPickCount": zod.number(),
+  "homePickerNames": zod.array(zod.string()),
+  "awayPickerNames": zod.array(zod.string())
 })
 export const GetPickPopularityResponse = zod.array(GetPickPopularityResponseItem)
 

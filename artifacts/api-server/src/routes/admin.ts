@@ -23,7 +23,6 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
     .where(eq(matchesTable.id, matchId))
     .returning();
 
-  // Recalculate points for all picks of this match
   const matchPicks = await db.select().from(picksTable).where(eq(picksTable.matchId, matchId));
   for (const pick of matchPicks) {
     let points = 0;
@@ -33,7 +32,6 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
     await db.update(picksTable).set({ pointsEarned: points }).where(eq(picksTable.id, pick.id));
   }
 
-  // Update season config last completed week
   const allCompleted = await db.select().from(matchesTable);
   const completedWeeks = [...new Set(allCompleted.filter((m) => m.isCompleted).map((m) => m.week))];
   const lastCompletedWeek = completedWeeks.length > 0 ? Math.max(...completedWeeks) : 0;
@@ -91,6 +89,48 @@ router.patch("/admin/season", async (req, res) => {
     lastCompletedWeek: updated.lastCompletedWeek,
     seasonLocked: updated.mode === "in-season",
   });
+});
+
+// Live NFL scores proxy — fetches current week scoreboard from ESPN (no API key needed)
+router.get("/admin/live-scores", async (_req, res) => {
+  try {
+    const espnRes = await fetch(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+      { headers: { "Accept": "application/json" } }
+    );
+    if (!espnRes.ok) {
+      res.status(502).json({ error: `ESPN returned ${espnRes.status}` });
+      return;
+    }
+    const data = await espnRes.json() as any;
+    // Parse ESPN scoreboard into simple format
+    const events = (data.events ?? []) as any[];
+    const games = events.map((event: any) => {
+      const competition = event.competitions?.[0];
+      const competitors = competition?.competitors ?? [];
+      const home = competitors.find((c: any) => c.homeAway === "home");
+      const away = competitors.find((c: any) => c.homeAway === "away");
+      const status = competition?.status?.type;
+      return {
+        id: event.id,
+        name: event.name,
+        homeTeam: home?.team?.abbreviation ?? "",
+        awayTeam: away?.team?.abbreviation ?? "",
+        homeScore: parseInt(home?.score ?? "0"),
+        awayScore: parseInt(away?.score ?? "0"),
+        status: status?.name ?? "unknown",
+        completed: status?.completed ?? false,
+        clock: competition?.status?.displayClock ?? "",
+        period: competition?.status?.period ?? 0,
+        winner: status?.completed
+          ? ((parseInt(home?.score ?? "0") > parseInt(away?.score ?? "0")) ? home?.team?.abbreviation : away?.team?.abbreviation)
+          : null,
+      };
+    });
+    res.json({ week: data.week?.number ?? null, games });
+  } catch (err) {
+    res.status(502).json({ error: String(err) });
+  }
 });
 
 export default router;

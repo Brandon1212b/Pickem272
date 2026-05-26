@@ -10,18 +10,15 @@ router.get("/leaderboard", async (_req, res) => {
   const matches = await db.select().from(matchesTable);
   const completedMatches = matches.filter((m) => m.isCompleted);
 
-  // Get last completed week
   const lastWeek = completedMatches.length > 0 ? Math.max(...completedMatches.map((m) => m.week)) : 0;
   const lastWeekMatches = completedMatches.filter((m) => m.week === lastWeek);
   const lastWeekMatchIds = new Set(lastWeekMatches.map((m) => m.id));
 
-  // Count total picks per match for "Against the Grain" badge (<15% picked a team)
   const matchPickCounts: Record<number, Record<string, number>> = {};
   for (const p of picks) {
     if (!matchPickCounts[p.matchId]) matchPickCounts[p.matchId] = {};
     matchPickCounts[p.matchId][p.selectedTeam] = (matchPickCounts[p.matchId][p.selectedTeam] ?? 0) + 1;
   }
-  const totalUsers = users.length || 1;
 
   const entries = users.map((u) => {
     const userPicks = picks.filter((p) => p.userId === u.id);
@@ -31,10 +28,8 @@ router.get("/leaderboard", async (_req, res) => {
       return m && p.selectedTeam === m.winner;
     }).length;
 
-    // Badge logic
     const badges: string[] = [];
 
-    // Perfect Week: all completed last-week picks correct, at least 1 pick
     const lwPicks = userPicks.filter((p) => lastWeekMatchIds.has(p.matchId));
     const lwCorrect = lwPicks.filter((p) => {
       const m = lastWeekMatches.find((m) => m.id === p.matchId);
@@ -44,7 +39,6 @@ router.get("/leaderboard", async (_req, res) => {
       badges.push("Perfect Week");
     }
 
-    // Against the Grain: picked an upset chosen by <15% of users at least once this season
     const agPick = userPicks.some((p) => {
       const m = completedMatches.find((m) => m.id === p.matchId);
       if (!m || p.selectedTeam !== m.winner) return false;
@@ -60,7 +54,6 @@ router.get("/leaderboard", async (_req, res) => {
 
   entries.sort((a, b) => b.totalPoints - a.totalPoints);
 
-  // Rank and cellar badge
   const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
   if (ranked.length > 0) {
     const minPoints = Math.min(...ranked.map((e) => e.totalPoints));
@@ -69,9 +62,7 @@ router.get("/leaderboard", async (_req, res) => {
         e.badges.push("The Cellar");
       }
     }
-    if (ranked[0]) {
-      if (!ranked[0].badges.includes("Leader")) ranked[0].badges.push("League Leader");
-    }
+    if (ranked[0] && !ranked[0].badges.includes("League Leader")) ranked[0].badges.push("League Leader");
   }
 
   res.json(ranked);
@@ -136,23 +127,42 @@ router.get("/leaderboard/weekly-extremes", async (_req, res) => {
   });
 });
 
+// Pick popularity — active week only, returns counts per team
 router.get("/leaderboard/pick-popularity", async (_req, res) => {
   const picks = await db.select().from(picksTable);
   const matches = await db.select().from(matchesTable);
-  const totalUsers = (await db.select().from(usersTable)).length || 1;
+  const users = await db.select().from(usersTable);
+  const [cfg] = await db.select().from(seasonConfigTable).limit(1);
 
-  const result = matches.map((m) => {
+  // Show the current/next relevant week: lastCompletedWeek+1 or week 1 pre-season
+  const lastCompleted = cfg?.lastCompletedWeek ?? 0;
+  const activeWeek = lastCompleted + 1 <= 18 ? lastCompleted + 1 : 18;
+
+  const weekMatches = matches.filter((m) => m.week === activeWeek);
+
+  const result = weekMatches.map((m) => {
     const matchPicks = picks.filter((p) => p.matchId === m.id);
-    const total = matchPicks.length || 1;
     const homePicks = matchPicks.filter((p) => p.selectedTeam === m.homeTeam).length;
     const awayPicks = matchPicks.filter((p) => p.selectedTeam === m.awayTeam).length;
+    const total = matchPicks.length || 1;
+
+    // Collect picker names for each team
+    const homePickerIds = matchPicks.filter((p) => p.selectedTeam === m.homeTeam).map((p) => p.userId);
+    const awayPickerIds = matchPicks.filter((p) => p.selectedTeam === m.awayTeam).map((p) => p.userId);
+    const homePickerNames = users.filter((u) => homePickerIds.includes(u.id)).map((u) => u.name);
+    const awayPickerNames = users.filter((u) => awayPickerIds.includes(u.id)).map((u) => u.name);
+
     return {
       matchId: m.id,
       week: m.week,
       homeTeam: m.homeTeam,
       awayTeam: m.awayTeam,
+      homePickCount: homePicks,
+      awayPickCount: awayPicks,
       homePickPct: Math.round((homePicks / total) * 100),
       awayPickPct: Math.round((awayPicks / total) * 100),
+      homePickerNames,
+      awayPickerNames,
     };
   });
 

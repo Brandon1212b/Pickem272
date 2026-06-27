@@ -1,0 +1,162 @@
+Find the seed file in scripts/ that populates the matches table in the DB. Replace ALL existing match data with the following. Do not run typecheck or build. More weeks will follow in the next message.
+
+Format: Week | Date | Time ET | Away @ Home
+
+WEEK 1
+Wed Sep 9 | 8:20 PM | New England Patriots @ Seattle Seahawks
+Thu Sep 10 | 8:35 PM | San Francisco 49ers @ Los Angeles Rams
+Sun Sep 13 | 1:00 PM | Atlanta Falcons @ Pittsburgh Steelers
+Sun Sep 13 | 1:00 PM | Baltimore Ravens @ Indianapolis Colts
+Sun Sep 13 | 1:00 PM | Buffalo Bills @ Houston Texans
+Sun Sep 13 | 1:00 PM | Chicago Bears @ Carolina Panthers
+Sun Sep 13 | 1:00 PM | Cleveland Browns @ Jacksonville Jaguars
+Sun Sep 13 | 1:00 PM | New Orleans Saints @ Detroit Lions
+Sun Sep 13 | 1:00 PM | New York Jets @ Tennessee Titans
+Sun Sep 13 | 1:00 PM | Tampa Bay Buccaneers @ Cincinnati Bengals
+Sun Sep 13 | 4:25 PM | Arizona Cardinals @ Los Angeles Chargers
+Sun Sep 13 | 4:25 PM | Green Bay Packers @ Minnesota Vikings
+Sun Sep 13 | 4:25 PM | Miami Dolphins @ Las Vegas Raiders
+Sun Sep 13 | 4:25 PM | Washington Commanders @ Philadelphia Eagles
+Sun Sep 13 | 8:20 PM | Dallas Cowboys @ New York Giants
+Mon Sep 14 | 8:15 PM | Denver Broncos @ Kansas City Chiefs
+
+WEEK 2
+Thu Sep 17 | 8:15 PM | Detroit Lions @ Buffalo Bills
+Sun Sep 20 | 1:00 PM | Carolina Panthers @ Atlanta Falcons
+Sun Sep 20 | 1:00 PM | Cincinnati Bengals @ Houston Texans
+Sun Sep 20 | 1:00 PM | Cleveland Browns @ Tampa Bay Buccaneers
+Sun Sep 20 | 1:00 PM | Green Bay Packers @ New York Jets
+Sun Sep 20 | 1:00 PM | Minnesota Vikings @ Chicago Bears
+Sun Sep 20 | 1:00 PM | New Orleans Saints @ Baltimore Ravens
+Sun Sep 20 | 1:00 PM | Philadelphia Eagles @ Tennessee Titans
+Sun Sep 20 | 1:00 PM | Pittsburgh Steelers @ New England Patriots
+Sun Sep 20 | 4:05 PM | Jacksonville Jaguars @ Denver Broncos
+Sun Sep 20 | 4:05 PM | Las Vegas Raiders @ Los Angeles Chargers
+Sun Sep 20 | 4:25 PM | Miami Dolphins @ San Francisco 49ers
+Sun Sep 20 | 4:25 PM | Seattle Seahawks @ Arizona Cardinals
+Sun Sep 20 | 4:25 PM | Washington Commanders @ Dallas Cowboys
+Sun Sep 20 | 8:20 PM | Indianapolis Colts @ Kansas City Chiefs
+Mon Sep 21 | 8:15 PM | New York Giants @ Los Angeles Rams
+
+WEEK 3
+Thu Sep 24 | 8:15 PM | Atlanta Falcons @ Green Bay Packers
+Sun Sep 27 | 1:00 PM | Carolina Panthers @ Cleveland Browns
+Sun Sep 27 | 1:00 PM | Cincinnati Bengals @ Pittsburgh Steelers
+Sun Sep 27 | 1:00 PM | Houston Texans @ Indianapolis Colts
+Sun Sep 27 | 1:00 PM | Kansas City Chiefs @ Miami Dolphins
+Sun Sep 27 | 1:00 PM | Los Angeles Chargers @ Buffalo Bills
+Sun Sep 27 | 1:00 PM | New England Patriots @ Jacksonville Jaguars
+Sun Sep 27 | 1:00 PM | New York Jets @ Detroit Lions
+Sun Sep 27 | 1:00 PM | Seattle Seahawks @ Washington Commanders
+Sun Sep 27 | 1:00 PM | Tennessee Titans @ New York Giants
+Sun Sep 27 | 4:05 PM | Arizona Cardinals @ San Francisco 49ers
+Sun Sep 27 | 4:05 PM | Minnesota Vikings @ Tampa Bay Buccaneers
+Sun Sep 27 | 4:25 PM | Baltimore Ravens @ Dallas Cowboys
+Sun Sep 27 | 4:25 PM | Las Vegas Raiders @ New Orleans Saints
+Sun Sep 27 | 8:20 PM | Los Angeles Rams @ Denver Broncos
+Mon Sep 28 | 8:15 PM | Philadelphia Eagles @ Chicago Bears
+
+WEEK 4
+Thu Oct 1 | 8:15 PM | Pittsburgh Steelers @ Cleveland Browns
+Sun Oct 4 | 9:30 AM | Indianapolis Colts @ Washington Commanders
+Sun Oct 4 | 1:00 PM | Arizona Cardinals @ New York Giants
+Sun Oct 4 | 1:00 PM | Dallas Cowboys @ Houston Texans
+Sun Oct 4 | 1:00 PM | Green Bay Packers @ Tampa Bay Buccaneers
+Sun Oct 4 | 1:00 PM | Jacksonville Jaguars @ Cincinnati Bengals
+Sun Oct 4 | 1:00 PM | Los Angeles Rams @ Philadelphia Eagles
+Sun Oct 4 | 1:00 PM | New England Patriots @ Buffalo Bills
+Sun Oct 4 | 1:00 PM | New York Jets @ Chicago Bears
+Sun Oct 4 | 1:00 PM | Tennessee Titans @ Baltimore Ravens
+Sun Oct 4 | 4:05 PM | Miami Dolphins @ Minnesota Vikings
+Sun Oct 4 | 4:25 PM | Denver Broncos @ San Francisco 49ers
+Sun Oct 4 | 4:25 PM | Kansas City Chiefs @ Las Vegas Raiders
+Sun Oct 4 | 4:25 PM | Los Angeles Chargers @ Seattle Seahawks
+Sun Oct 4 | 8:20 PM | Detroit Lions @ Carolina Panthers
+Mon Oct 5 | 8:15 PM | Atlanta Falcons @ New Orleans Saints
+
+WEEK 5
+Thu Oct 8 | 8:15 PM | Tampa Bay Buccaneers @ Dallas Cowboys
+Sun Oct 11 | 9:30 AM | Philadelphia Eagles @ Jacksonville Jaguars
+Sun Oct 11 | 1:00 PM | Cincinnati Bengals @ Miami Dolphins
+Sun Oct 11 | 1:00 PM | Cleveland Browns @ New York Jets
+Sun Oct 11 | 1:00 PM | Houston Texans @ Tennessee Titans
+Sun Oct 11 | 1:00 PM | Indianapolis Colts @ Pittsburgh Steelers
+Sun Oct 11 | 1:00 PM | Las Vegas Raiders @ New England Patriots
+Sun Oct 11 | 1:00 PM | Minnesota Vikings @ New Orleans Saints
+Sun Oct 11 | 1:00 PM | New York Giants @ Washington Commanders
+Sun Oct 11 | 4:05 PM | Denver Broncos @ Los Angeles Chargers
+Sun Oct 11 | 4:25 PM | Chicago Bears @ Green Bay Packers
+Sun Oct 11 | 4:25 PM | Detroit Lions @ Arizona Cardinals
+Sun Oct 11 | 4:25 PM | San Francisco 49ers @ Seattle Seahawks
+Sun Oct 11 | 8:20 PM | Baltimore Ravens @ Atlanta Falcons
+Mon Oct 12 | 8:15 PM | Buffalo Bills @ Los Angeles Rams
+BYE: Carolina Panthers, Kansas City Chiefs
+
+WEEK 6
+Thu Oct 15 | 8:15 PM | Seattle Seahawks @ Denver Broncos
+Sun Oct 18 | 9:30 AM | Houston Texans @ Jacksonville Jaguars
+Sun Oct 18 | 1:00 PM | Baltimore Ravens @ Cleveland Browns
+Sun Oct 18 | 1:00 PM | Carolina Panthers @ Philadelphia Eagles
+Sun Oct 18 | 1:00 PM | Chicago Bears @ Atlanta Falcons
+Sun Oct 18 | 1:00 PM | New Orleans Saints @ New York Giants
+Sun Oct 18 | 1:00 PM | New York Jets @ New England Patriots
+Sun Oct 18 | 1:00 PM | Pittsburgh Steelers @ Tampa Bay Buccaneers
+Sun Oct 18 | 1:00 PM | Tennessee Titans @ Indianapolis Colts
+Sun Oct 18 | 4:05 PM | Arizona Cardinals @ Los Angeles Rams
+Sun Oct 18 | 4:25 PM | Buffalo Bills @ Las Vegas Raiders
+Sun Oct 18 | 4:25 PM | Los Angeles Chargers @ Kansas City Chiefs
+Sun Oct 18 | 8:20 PM | Dallas Cowboys @ Green Bay Packers
+Mon Oct 19 | 8:15 PM | Washington Commanders @ San Francisco 49ers
+BYE: Cincinnati Bengals, Detroit Lions, Miami Dolphins, Minnesota Vikings
+
+WEEK 7
+Thu Oct 22 | 8:15 PM | New England Patriots @ Chicago Bears
+Sun Oct 25 | 9:30 AM | Pittsburgh Steelers @ New Orleans Saints
+Sun Oct 25 | 1:00 PM | Cincinnati Bengals @ Baltimore Ravens
+Sun Oct 25 | 1:00 PM | Cleveland Browns @ Tennessee Titans
+Sun Oct 25 | 1:00 PM | Indianapolis Colts @ Minnesota Vikings
+Sun Oct 25 | 1:00 PM | Miami Dolphins @ New York Jets
+Sun Oct 25 | 1:00 PM | New York Giants @ Houston Texans
+Sun Oct 25 | 1:00 PM | San Francisco 49ers @ Atlanta Falcons
+Sun Oct 25 | 1:00 PM | Tampa Bay Buccaneers @ Carolina Panthers
+Sun Oct 25 | 4:05 PM | Denver Broncos @ Arizona Cardinals
+Sun Oct 25 | 4:25 PM | Green Bay Packers @ Detroit Lions
+Sun Oct 25 | 4:25 PM | Los Angeles Rams @ Las Vegas Raiders
+Sun Oct 25 | 8:20 PM | Kansas City Chiefs @ Seattle Seahawks
+Mon Oct 26 | 8:15 PM | Dallas Cowboys @ Philadelphia Eagles
+BYE: Buffalo Bills, Jacksonville Jaguars, Los Angeles Chargers, Washington Commanders
+
+WEEK 8
+Thu Oct 29 | 8:15 PM | Carolina Panthers @ Green Bay Packers
+Sun Nov 1 | 1:00 PM | Arizona Cardinals @ Dallas Cowboys
+Sun Nov 1 | 1:00 PM | Atlanta Falcons @ Tampa Bay Buccaneers
+Sun Nov 1 | 1:00 PM | Baltimore Ravens @ Buffalo Bills
+Sun Nov 1 | 1:00 PM | Cleveland Browns @ Pittsburgh Steelers
+Sun Nov 1 | 1:00 PM | Indianapolis Colts @ Jacksonville Jaguars
+Sun Nov 1 | 1:00 PM | Las Vegas Raiders @ New York Jets
+Sun Nov 1 | 1:00 PM | Minnesota Vikings @ Detroit Lions
+Sun Nov 1 | 1:00 PM | Tennessee Titans @ Cincinnati Bengals
+Sun Nov 1 | 4:05 PM | Los Angeles Chargers @ Los Angeles Rams
+Sun Nov 1 | 4:25 PM | Kansas City Chiefs @ Denver Broncos
+Sun Nov 1 | 4:25 PM | New England Patriots @ Miami Dolphins
+Sun Nov 1 | 8:20 PM | Philadelphia Eagles @ Washington Commanders
+Mon Nov 2 | 8:15 PM | Chicago Bears @ Seattle Seahawks
+BYE: Houston Texans, New Orleans Saints, New York Giants, San Francisco 49ers
+
+WEEK 9
+Thu Nov 5 | 8:15 PM | Jacksonville Jaguars @ Baltimore Ravens
+Sun Nov 8 | 9:30 AM | Cincinnati Bengals @ Atlanta Falcons
+Sun Nov 8 | 1:00 PM | Cleveland Browns @ New Orleans Saints
+Sun Nov 8 | 1:00 PM | Dallas Cowboys @ Indianapolis Colts
+Sun Nov 8 | 1:00 PM | Denver Broncos @ Carolina Panthers
+Sun Nov 8 | 1:00 PM | Detroit Lions @ Miami Dolphins
+Sun Nov 8 | 1:00 PM | Los Angeles Rams @ Washington Commanders
+Sun Nov 8 | 1:00 PM | New York Giants @ Philadelphia Eagles
+Sun Nov 8 | 1:00 PM | New York Jets @ Kansas City Chiefs
+Sun Nov 8 | 4:05 PM | Houston Texans @ Los Angeles Chargers
+Sun Nov 8 | 4:05 PM | Las Vegas Raiders @ San Francisco 49ers
+Sun Nov 8 | 4:25 PM | Arizona Cardinals @ Seattle Seahawks
+Sun Nov 8 | 4:25 PM | Green Bay Packers @ New England Patriots
+Sun Nov 8 | 8:20 PM | Tampa Bay Buccaneers @ Chicago Bears
+Mon Nov 9 | 8:15 PM | Buffalo Bills @ Minnesota Vikings
+BYE: Pittsburgh Steelers, Tennessee Titans

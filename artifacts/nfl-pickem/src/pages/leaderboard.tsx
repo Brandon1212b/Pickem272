@@ -63,7 +63,7 @@ function BadgePop({
       </button>
       {open && def && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[180px] rounded-xl border bg-popover shadow-lg px-3 py-2 text-sm pointer-events-none"
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-max max-w-[180px] rounded-xl border bg-popover shadow-lg px-3 py-2 text-sm pointer-events-none"
         >
           <p className="font-semibold text-foreground leading-snug">{def.name}</p>
           <p className="text-muted-foreground text-xs mt-0.5 leading-snug">{def.desc}</p>

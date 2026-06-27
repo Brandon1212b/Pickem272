@@ -176,26 +176,30 @@ export default function Leaderboard() {
 
       {/* Weekly extremes */}
       {(extremes?.topUsers?.length || 0) + (extremes?.bottomUsers?.length || 0) > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {extremes?.topUsers && extremes.topUsers.length > 0 && (
             <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-5 text-center">
-                <div className="text-3xl mb-1">🔥</div>
-                <h3 className="font-bold text-lg mb-0.5">Week {extremes.week} High Score</h3>
-                <div className="font-semibold text-primary">
-                  {extremes.topUsers.map((u) => `${u.name} (${u.points} pts)`).join(", ")}
-                </div>
+              <CardContent className="p-3 text-center">
+                <div className="text-xl mb-0.5">🔥</div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+                  Wk {extremes.week} High
+                </p>
+                <p className="font-bold text-sm text-primary leading-snug">
+                  {extremes.topUsers.map((u) => `${u.name} (${u.points})`).join(", ")}
+                </p>
               </CardContent>
             </Card>
           )}
           {extremes?.bottomUsers && extremes.bottomUsers.length > 0 && (
             <Card className="bg-destructive/5 border-destructive/20">
-              <CardContent className="p-5 text-center">
-                <div className="text-3xl mb-1">💩</div>
-                <h3 className="font-bold text-lg mb-0.5">Week {extremes.week} Low Score</h3>
-                <div className="font-semibold text-destructive">
-                  {extremes.bottomUsers.map((u) => `${u.name} (${u.points} pts)`).join(", ")}
-                </div>
+              <CardContent className="p-3 text-center">
+                <div className="text-xl mb-0.5">💩</div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+                  Wk {extremes.week} Low
+                </p>
+                <p className="font-bold text-sm text-destructive leading-snug">
+                  {extremes.bottomUsers.map((u) => `${u.name} (${u.points})`).join(", ")}
+                </p>
               </CardContent>
             </Card>
           )}

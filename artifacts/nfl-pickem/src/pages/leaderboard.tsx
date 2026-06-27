@@ -1,9 +1,8 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   useGetLeaderboard,
   useGetLeaderboardTrends,
   useGetWeeklyExtremes,
-  useGetSeasonStatus,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,17 +14,66 @@ const FALLBACK_COLORS = [
   "#FF2D55", "#5AC8FA", "#FFCC00", "#FF9500",
 ];
 
-const BADGE_KEY = [
-  { emoji: "👑", name: "League Leader", desc: "Currently #1 in total points" },
-  { emoji: "🏆", name: "Perfect Week", desc: "Picked every game correctly in a completed week" },
-  { emoji: "🔥", name: "Week High Score", desc: "One per week you had the top score" },
-  { emoji: "💩", name: "Week Low Score", desc: "One per week you had the lowest score" },
-];
+const BADGE_DEFS: Record<string, { name: string; desc: string }> = {
+  "👑": { name: "League Leader",  desc: "Currently #1 in total points" },
+  "🏆": { name: "Perfect Week",   desc: "Picked every game correctly in a completed week" },
+  "🔥": { name: "Week High Score", desc: "Had the highest score that week" },
+  "💩": { name: "Week Low Score",  desc: "Had the lowest score that week" },
+};
 
 function badgeEmoji(b: string): string {
   if (b === "Perfect Week") return "🏆";
   if (b === "League Leader") return "👑";
   return "";
+}
+
+// Click-to-open badge popover — no extra dependencies needed
+function BadgePop({
+  emoji,
+  count,
+}: {
+  emoji: string;
+  count?: number;
+}) {
+  const def = BADGE_DEFS[emoji];
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  const display = count && count > 1 ? emoji.repeat(Math.min(count, 5)) : emoji;
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="cursor-pointer hover:opacity-70 transition-opacity text-base leading-none focus:outline-none"
+        aria-label={def?.name ?? emoji}
+      >
+        {display}
+      </button>
+      {open && def && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[180px] rounded-xl border bg-popover shadow-lg px-3 py-2 text-sm pointer-events-none"
+        >
+          <p className="font-semibold text-foreground leading-snug">{def.name}</p>
+          <p className="text-muted-foreground text-xs mt-0.5 leading-snug">{def.desc}</p>
+          {count && count > 1 && (
+            <p className="text-primary text-xs font-semibold mt-1">{count}× this season</p>
+          )}
+        </div>
+      )}
+    </span>
+  );
 }
 
 export default function Leaderboard() {
@@ -87,23 +135,15 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-1 flex-wrap">
                       <span className="font-semibold">{entry.name}</span>
                       {entry.weekHighScoreCount > 0 && (
-                        <span title={`Week high score ${entry.weekHighScoreCount}x`}>
-                          {"🔥".repeat(Math.min(entry.weekHighScoreCount, 10))}
-                        </span>
+                        <BadgePop emoji="🔥" count={entry.weekHighScoreCount} />
                       )}
                       {entry.weekLowScoreCount > 0 && (
-                        <span title={`Week low score ${entry.weekLowScoreCount}x`}>
-                          {"💩".repeat(Math.min(entry.weekLowScoreCount, 10))}
-                        </span>
+                        <BadgePop emoji="💩" count={entry.weekLowScoreCount} />
                       )}
-                      <span className="inline-flex gap-0.5">
-                        {entry.badges.map((b, i) => {
-                          const emoji = badgeEmoji(b);
-                          return emoji ? (
-                            <span key={i} title={b} className="text-base">{emoji}</span>
-                          ) : null;
-                        })}
-                      </span>
+                      {entry.badges.map((b, i) => {
+                        const emoji = badgeEmoji(b);
+                        return emoji ? <BadgePop key={i} emoji={emoji} /> : null;
+                      })}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-lg">{entry.totalPoints}</TableCell>
@@ -114,26 +154,6 @@ export default function Leaderboard() {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      {/* Badge Key */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Badge Key</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {BADGE_KEY.map(({ emoji, name, desc }) => (
-              <div key={name} className="flex items-center gap-2.5 p-2 rounded-lg bg-secondary/30">
-                <span className="text-xl shrink-0">{emoji}</span>
-                <div>
-                  <p className="text-xs font-semibold text-foreground">{name}</p>
-                  <p className="text-[10px] text-muted-foreground">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
 

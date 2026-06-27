@@ -41,6 +41,21 @@ const AUTOFILL_OPTIONS: { mode: AutofillMode; label: string; icon: React.Element
 // Sept 3, 2026 8:20 PM ET — estimated NFL 2026 season opener
 const PICKS_LOCK_DATE = new Date("2026-09-04T00:20:00.000Z");
 
+const NFL_STRUCTURE = [
+  { conf: "AFC", divisions: [
+    { div: "East",  teams: ["BUF", "MIA", "NE",  "NYJ"] },
+    { div: "North", teams: ["BAL", "CIN", "CLE", "PIT"] },
+    { div: "South", teams: ["HOU", "IND", "JAX", "TEN"] },
+    { div: "West",  teams: ["DEN", "KC",  "LAC", "LV"]  },
+  ]},
+  { conf: "NFC", divisions: [
+    { div: "East",  teams: ["DAL", "NYG", "PHI", "WAS"] },
+    { div: "North", teams: ["CHI", "DET", "GB",  "MIN"] },
+    { div: "South", teams: ["ATL", "CAR", "NO",  "TB"]  },
+    { div: "West",  teams: ["ARI", "LAR", "SF",  "SEA"] },
+  ]},
+];
+
 function useCountdown(target: Date) {
   const calc = () => {
     const diff = target.getTime() - Date.now();
@@ -422,25 +437,51 @@ export default function Picks() {
         )}
 
         {/* Team records */}
-        {teamRecordsSorted.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Your Team Records</CardTitle>
-              <p className="text-xs text-muted-foreground">How you have each team finishing based on your picks</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {teamRecordsSorted.map(({ team, wins, losses }) => (
-                  <div key={team} className="flex flex-col items-center gap-1 p-2 rounded-xl bg-secondary/30 border border-border/50">
-                    <TeamLogo team={team} size={28} />
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">{team}</span>
-                    <span className="text-xs font-bold text-foreground">{wins}-{losses}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {teamRecordsSorted.length > 0 && (() => {
+          const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+          return (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Your Team Records</CardTitle>
+                <p className="text-xs text-muted-foreground">How you have each team finishing based on your picks</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {NFL_STRUCTURE.map(({ conf, divisions }) => {
+                  const hasAny = divisions.some((d) => d.teams.some((t) => recordMap[t]));
+                  if (!hasAny) return null;
+                  return (
+                    <div key={conf}>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">{conf}</p>
+                      <div className="space-y-1.5">
+                        {divisions.map(({ div, teams }) => {
+                          const divTeams = teams.filter((t) => recordMap[t]);
+                          if (divTeams.length === 0) return null;
+                          return (
+                            <div key={div} className="flex items-center gap-2">
+                              <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {divTeams.map((team) => {
+                                  const { wins, losses } = recordMap[team];
+                                  return (
+                                    <div key={team} className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-secondary/30 border border-border/50 min-w-[44px]">
+                                      <TeamLogo team={team} size={22} />
+                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">{team}</span>
+                                      <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     );
   }
@@ -512,24 +553,50 @@ export default function Picks() {
       )}
 
       {/* Team records (if picks exist) */}
-      {teamRecordsSorted.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {teamRecordsSorted.map(({ team, wins, losses }) => (
-                <div key={team} className="flex flex-col items-center gap-1 p-2 rounded-xl bg-secondary/30 border border-border/50 flex-shrink-0 min-w-[52px]">
-                  <TeamLogo team={team} size={24} />
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">{team}</span>
-                  <span className="text-xs font-bold text-foreground">{wins}-{losses}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {teamRecordsSorted.length > 0 && (() => {
+        const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+        return (
+          <Card>
+            <CardHeader className="pb-1 pt-3 px-4">
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 space-y-2">
+              {NFL_STRUCTURE.map(({ conf, divisions }) => {
+                const hasAny = divisions.some((d) => d.teams.some((t) => recordMap[t]));
+                if (!hasAny) return null;
+                return (
+                  <div key={conf}>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{conf}</p>
+                    <div className="space-y-1">
+                      {divisions.map(({ div, teams }) => {
+                        const divTeams = teams.filter((t) => recordMap[t]);
+                        if (divTeams.length === 0) return null;
+                        return (
+                          <div key={div} className="flex items-center gap-1.5">
+                            <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
+                            <div className="flex gap-1 flex-wrap">
+                              {divTeams.map((team) => {
+                                const { wins, losses } = recordMap[team];
+                                return (
+                                  <div key={team} className="flex flex-col items-center gap-0 p-1 rounded-lg bg-secondary/30 border border-border/50 min-w-[40px]">
+                                    <TeamLogo team={team} size={18} />
+                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">{team}</span>
+                                    <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Week accordions */}
       <Accordion type="multiple" defaultValue={["1"]} className="space-y-3">

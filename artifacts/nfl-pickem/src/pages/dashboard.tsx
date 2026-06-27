@@ -64,6 +64,24 @@ function PickerAvatars({
   );
 }
 
+// Day order within a week: Wed opener → Thu night → Fri (Black Friday) → Sat → Sun → Mon night
+const DAY_ORDER: Record<string, number> = { Wed: 0, Thu: 1, Fri: 2, Sat: 3, Sun: 4, Mon: 5 };
+
+function gameTimeSortKey(gameTime: string | null): number {
+  if (!gameTime) return 9999;
+  const [day, time] = gameTime.split(" ");
+  const dayNum = DAY_ORDER[day] ?? 10;
+  if (!time) return dayNum * 10000;
+  const isPM = time.endsWith("pm");
+  const timeStr = time.replace(/[ap]m$/, "");
+  const [hoursStr, minutesStr] = timeStr.split(":");
+  let h = parseInt(hoursStr, 10);
+  const m = parseInt(minutesStr ?? "0", 10);
+  if (isPM && h !== 12) h += 12;
+  if (!isPM && h === 12) h = 0;
+  return dayNum * 10000 + h * 60 + m;
+}
+
 interface PopularityItem {
   matchId: number;
   week: number;
@@ -203,7 +221,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="space-y-3 pt-1">
           {popularity && popularity.length > 0 ? (
-            popularity.map((pop) => {
+            [...popularity].sort((a, b) => gameTimeSortKey(a.gameTime) - gameTimeSortKey(b.gameTime)).map((pop) => {
               const userPickedTeam = picks?.find((p) => p.matchId === pop.matchId)?.selectedTeam;
               const userPickedAway = userPickedTeam === pop.awayTeam;
               const userPickedHome = userPickedTeam === pop.homeTeam;

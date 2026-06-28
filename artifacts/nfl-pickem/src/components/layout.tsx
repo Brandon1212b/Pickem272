@@ -180,8 +180,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const activeWeek = (status?.lastCompletedWeek ?? 0) + 1;
 
   const navItems = [
-    { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard },
     { href: "/picks", label: "My Picks", icon: Grid },
+    { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard },
     { href: "/leaderboard", label: "Standings", icon: Trophy },
   ];
 

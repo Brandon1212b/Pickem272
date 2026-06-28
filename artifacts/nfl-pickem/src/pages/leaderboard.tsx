@@ -81,6 +81,9 @@ export default function Leaderboard() {
   const { data: trends, isLoading: loadingTrends } = useGetLeaderboardTrends();
   const { data: extremes, isLoading: loadingExtremes } = useGetWeeklyExtremes();
 
+  // null = follow active week; number = user-selected week
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+
   if (loadingBoard || loadingTrends || loadingExtremes) {
     return (
       <div className="space-y-4">
@@ -100,14 +103,23 @@ export default function Leaderboard() {
     }
   }
 
-  // Current week points per user: use the last completed week from extremes
+  // currentWeek = last completed week from extremes
   const currentWeek = extremes?.week ?? 0;
-  const thisWeekPts: Record<number, number> = {};
-  if (currentWeek > 0 && trends) {
-    for (const u of trends) {
-      thisWeekPts[u.userId] = u.weeklyPoints[currentWeek - 1] ?? 0;
-    }
-  }
+  const activeWeek = selectedWeek ?? currentWeek;
+
+  // Per-week points for a given week (derived from cumulative trends)
+  const getWeekPts = (userId: number, week: number): number => {
+    if (!trends || week <= 0) return 0;
+    const u = trends.find((t) => t.userId === userId);
+    if (!u) return 0;
+    const cumNow = u.weeklyPoints[week - 1] ?? 0;
+    const cumPrev = week > 1 ? (u.weeklyPoints[week - 2] ?? 0) : 0;
+    return cumNow - cumPrev;
+  };
+
+  const completedWeeks = currentWeek > 0
+    ? Array.from({ length: currentWeek }, (_, i) => i + 1)
+    : [];
 
   // Biggest Mover: compare rank at previous week vs current week
   type Mover = { name: string; avatar: string | null; delta: number };
@@ -170,7 +182,18 @@ export default function Leaderboard() {
                 <TableHead className="w-12">Rank</TableHead>
                 <TableHead>Player</TableHead>
                 <TableHead className="text-right whitespace-nowrap">
-                  {currentWeek > 0 ? `Wk ${currentWeek}` : "Pts"}
+                  {completedWeeks.length > 0 ? (
+                    <select
+                      value={activeWeek}
+                      onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                      className="bg-transparent text-right font-medium text-sm cursor-pointer focus:outline-none appearance-none pr-3 relative"
+                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7280' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 0 center" }}
+                    >
+                      {completedWeeks.map((w) => (
+                        <option key={w} value={w}>Wk {w}</option>
+                      ))}
+                    </select>
+                  ) : "Pts"}
                 </TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Record</TableHead>
@@ -196,7 +219,7 @@ export default function Leaderboard() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-bold text-lg">
-                    {currentWeek > 0 ? (thisWeekPts[entry.userId] ?? 0) : entry.totalPoints}
+                    {activeWeek > 0 ? getWeekPts(entry.userId, activeWeek) : entry.totalPoints}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground font-medium">
                     {entry.totalPoints}

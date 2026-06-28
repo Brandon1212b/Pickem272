@@ -48,7 +48,7 @@ function BadgePop({
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  const display = count && count > 1 ? emoji.repeat(Math.min(count, 5)) : emoji;
+  const display = count && count > 1 ? `${emoji}x${count}` : emoji;
 
   return (
     <span className="relative inline-flex">

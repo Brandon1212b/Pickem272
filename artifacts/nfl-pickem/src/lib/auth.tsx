@@ -18,6 +18,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+let protectedFetchInstalled = false;
 
 function normalizeUser(user: User): User {
   return { ...user, role: user.role ?? "member" };
@@ -35,6 +36,41 @@ function getStoredUserId(): number | null {
   }
 }
 
+function getRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+function getRequestMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (init?.method) return init.method.toUpperCase();
+  if (typeof Request !== "undefined" && input instanceof Request) return input.method.toUpperCase();
+  return "GET";
+}
+
+function shouldAttachAuth(input: RequestInfo | URL, init?: RequestInit): boolean {
+  const url = getRequestUrl(input);
+  const method = getRequestMethod(input, init);
+  return url.startsWith("/api/admin") || (method === "DELETE" && /^\/api\/users\/\d+/.test(url));
+}
+
+function installProtectedFetch() {
+  if (protectedFetchInstalled || typeof window === "undefined") return;
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!shouldAttachAuth(input, init)) return originalFetch(input, init);
+
+    const headers = new Headers(typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined);
+    new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+    new Headers(getAuthHeaders()).forEach((value, key) => headers.set(key, value));
+
+    return originalFetch(input, { ...init, headers });
+  };
+
+  protectedFetchInstalled = true;
+}
+
 setAuthTokenGetter(() => {
   const userId = getStoredUserId();
   return userId ? String(userId) : null;
@@ -46,6 +82,8 @@ export function getAuthHeaders(): HeadersInit {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  installProtectedFetch();
+
   const [user, setUserState] = useState<User | null>(() => {
     const saved = localStorage.getItem("auth_user");
     return saved ? normalizeUser(JSON.parse(saved)) : null;

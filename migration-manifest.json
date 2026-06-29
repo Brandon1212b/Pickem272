@@ -1,1 +1,1 @@
-[{"path":"lib/db/src/schema/vegas_odds.ts","op":"add"},{"path":"lib/db/src/schema/index.ts","op":"update"},{"path":"artifacts/api-server/src/routes/odds.ts","op":"add"},{"path":"artifacts/api-server/src/routes/leaderboard.ts","op":"update"},{"path":"artifacts/api-server/src/routes/index.ts","op":"update"}]
+[{"path":"lib/db/src/schema/vegas_odds.ts","op":"update"}]

@@ -26,6 +26,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Save, Shuffle, Wand2, Star, RotateCcw, CheckCircle2, Pencil, Plane, Clock, ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { TeamLogo } from "@/lib/team-logos";
 import { getTeamColor } from "@/lib/team-colors";
 
@@ -55,6 +65,8 @@ const NFL_STRUCTURE = [
     { div: "West",  teams: ["ARI", "LAR", "SF",  "SEA"] },
   ]},
 ];
+
+const ALL_TEAMS = NFL_STRUCTURE.flatMap((c) => c.divisions.flatMap((d) => d.teams));
 
 function useCountdown(target: Date) {
   const calc = () => {
@@ -106,6 +118,7 @@ export default function Picks() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
 
   // Tutorial popup — shows on first visit to picks page
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem("picks_tutorial_seen"));
@@ -241,6 +254,35 @@ export default function Picks() {
     }, {} as Record<number, MatchList>);
   }, [matches]);
 
+  const teamCompletionStatus = useMemo(() => {
+    if (!matches) return {} as Record<string, { total: number; picked: number; complete: boolean }>;
+    const status: Record<string, { total: number; picked: number; complete: boolean }> = {};
+    for (const team of ALL_TEAMS) {
+      const teamMatches = matches.filter((m) => m.homeTeam === team || m.awayTeam === team);
+      const picked = teamMatches.filter((m) => localPicks[m.id]).length;
+      status[team] = {
+        total: teamMatches.length,
+        picked,
+        complete: teamMatches.length > 0 && picked === teamMatches.length,
+      };
+    }
+    return status;
+  }, [matches, localPicks]);
+
+  const filteredMatchesByWeek = useMemo(() => {
+    if (selectedTeamFilter === "all") return matchesByWeek;
+    return Object.fromEntries(
+      Object.entries(matchesByWeek)
+        .map(([week, weekMatches]) => [
+          week,
+          weekMatches.filter(
+            (m) => m.homeTeam === selectedTeamFilter || m.awayTeam === selectedTeamFilter,
+          ),
+        ])
+        .filter(([, weekMatches]) => weekMatches.length > 0),
+    );
+  }, [matchesByWeek, selectedTeamFilter]);
+
   // Team records from picks (computed here for both views)
   const teamRecordsSorted = useMemo(() => {
     if (!matches || !picks) return [];
@@ -276,11 +318,88 @@ export default function Picks() {
   const pendingOption = AUTOFILL_OPTIONS.find((o) => o.mode === pendingAutofill);
 
   const activeWeek = (status?.lastCompletedWeek ?? 0) + 1;
-  const allWeekEntries = Object.entries(matchesByWeek)
+  const allWeekEntries = Object.entries(filteredMatchesByWeek)
     .map(([wStr, wMatches]) => ({ week: Number(wStr), matches: wMatches }));
   const currentWeekEntry = allWeekEntries.find((w) => w.week === activeWeek);
   const pastWeekEntries = allWeekEntries.filter((w) => w.week < activeWeek).sort((a, b) => b.week - a.week);
   const futureWeekEntries = allWeekEntries.filter((w) => w.week > activeWeek).sort((a, b) => a.week - b.week);
+  const teamFilterActive = selectedTeamFilter !== "all";
+
+  const teamFilterControl = (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Browse by Team</p>
+      <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+        <SelectTrigger
+          className={cn(
+            teamFilterActive && teamCompletionStatus[selectedTeamFilter]?.complete
+              && "border-green-500 ring-1 ring-green-500/40",
+          )}
+        >
+          <SelectValue className="sr-only" />
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {teamFilterActive && (
+              <div
+                className={cn(
+                  "rounded shrink-0",
+                  teamCompletionStatus[selectedTeamFilter]?.complete && "border-2 border-green-500 p-0.5",
+                )}
+              >
+                <TeamLogo team={selectedTeamFilter} size={20} />
+              </div>
+            )}
+            <span className="truncate font-medium">
+              {teamFilterActive ? selectedTeamFilter : "All Teams"}
+            </span>
+            {teamFilterActive && teamCompletionStatus[selectedTeamFilter]?.complete && (
+              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+            )}
+          </div>
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectItem value="all">All Teams</SelectItem>
+          {NFL_STRUCTURE.map(({ conf, divisions }) => (
+            <SelectGroup key={conf}>
+              <SelectLabel className="text-[10px] uppercase tracking-wider">{conf}</SelectLabel>
+              {divisions.flatMap(({ teams }) =>
+                teams.map((team) => {
+                  const { complete, picked, total } = teamCompletionStatus[team] ?? { complete: false, picked: 0, total: 0 };
+                  return (
+                    <SelectItem key={team} value={team} textValue={team}>
+                      <div className="flex items-center gap-2 w-full pr-2">
+                        <div
+                          className={cn(
+                            "rounded shrink-0",
+                            complete && "border-2 border-green-500 p-0.5",
+                          )}
+                        >
+                          <TeamLogo team={team} size={20} />
+                        </div>
+                        <span className="font-medium">{team}</span>
+                        {complete ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 ml-auto" />
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground ml-auto tabular-nums">
+                            {picked}/{total}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                }),
+              )}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
+      {teamFilterActive && (
+        <p className="text-xs text-muted-foreground px-1">
+          {teamCompletionStatus[selectedTeamFilter]?.picked ?? 0} of{" "}
+          {teamCompletionStatus[selectedTeamFilter]?.total ?? 0} games picked for{" "}
+          {selectedTeamFilter}
+        </p>
+      )}
+    </div>
+  );
 
   // ── TUTORIAL DIALOG ───────────────────────────────────────────────────────────
   const TutorialDialog = (
@@ -412,14 +531,21 @@ export default function Picks() {
           </div>
         )}
 
+        {teamFilterControl}
+
         {/* Current week */}
         {currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
 
         {/* Past weeks — most recent first */}
         {pastWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
 
-        {/* Future weeks — collapsed section */}
+        {/* Future weeks — collapsed section (all weeks shown when team filter active) */}
         {futureWeekEntries.length > 0 && (
+          teamFilterActive ? (
+            <div className="space-y-3">
+              {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
+            </div>
+          ) : (
           <div>
             <button
               onClick={() => setShowFutureWeeks((v) => !v)}
@@ -434,6 +560,7 @@ export default function Picks() {
               </div>
             )}
           </div>
+          )
         )}
 
         {/* Team records */}
@@ -602,9 +729,11 @@ export default function Picks() {
         );
       })()}
 
+      {teamFilterControl}
+
       {/* Week accordions */}
       <Accordion type="multiple" defaultValue={["1"]} className="space-y-3">
-        {Object.entries(matchesByWeek).map(([week, weekMatches]) => {
+        {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
           const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
           const weekComplete = weekPickCount === weekMatches.length;
 

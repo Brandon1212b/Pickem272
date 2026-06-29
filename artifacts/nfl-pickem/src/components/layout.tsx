@@ -57,16 +57,6 @@ function NavStats({ userId }: { userId: number }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      {weekCorrect !== null && (
-        <button
-          onClick={() => setLocation("/dashboard")}
-          className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors"
-          title="View this week's results"
-        >
-          <span className="text-green-500 font-semibold">{weekCorrect} right</span>
-          <span className="text-muted-foreground">wk{lastWeek}</span>
-        </button>
-      )}
       {rank !== null && (
         <button
           onClick={() => setLocation("/leaderboard")}

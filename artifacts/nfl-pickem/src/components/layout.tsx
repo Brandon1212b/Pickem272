@@ -103,7 +103,7 @@ function ProfileButton() {
     setUser({ ...user, avatar: color });
   };
 
-  const isCommish = user.name === "Bfabs";
+  const isCommish = user.role === "admin";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -118,7 +118,7 @@ function ProfileButton() {
             <UserAvatar name={user.name} color={avatarColor} size="lg" />
           </div>
           <p className="font-semibold">{user.name}</p>
-          {isCommish && <span className="text-xs text-primary font-medium">Commissioner 👑</span>}
+          {isCommish && <span className="text-xs text-primary font-medium">Commissioner</span>}
         </div>
 
         {/* Color picker */}

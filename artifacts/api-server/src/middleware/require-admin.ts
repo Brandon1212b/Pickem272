@@ -4,8 +4,14 @@ import { eq } from "drizzle-orm";
 
 const BOOTSTRAP_ADMIN_NAMES = new Set(["Bfabs"]);
 
+function getRequestUserId(headerValue: string | undefined): number {
+  if (!headerValue) return NaN;
+  const match = headerValue.match(/^Bearer\s+(.+)$/i);
+  return Number(match?.[1] ?? headerValue);
+}
+
 export const requireAdmin: RequestHandler = async (req, res, next) => {
-  const userId = Number(req.header("x-user-id"));
+  const userId = getRequestUserId(req.header("authorization") ?? req.header("x-user-id"));
 
   if (!Number.isInteger(userId) || userId <= 0) {
     res.status(403).json({ error: "Commissioner access required" });

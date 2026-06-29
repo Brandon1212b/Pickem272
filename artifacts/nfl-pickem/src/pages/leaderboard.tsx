@@ -27,6 +27,14 @@ function badgeEmoji(b: string): string {
   return "";
 }
 
+// Truncate username to 10 characters with ellipsis
+const truncateName = (name: string, maxLength: number = 10): string => {
+  if (name.length > maxLength) {
+    return name.substring(0, maxLength - 1) + '…';
+  }
+  return name;
+};
+
 // Click-to-open badge popover — no extra dependencies needed
 function BadgePop({
   emoji,
@@ -98,7 +106,7 @@ export default function Leaderboard() {
     const numWeeks = trends[0].weeklyPoints.length;
     for (let w = 0; w < numWeeks; w++) {
       const dataPoint: Record<string, string | number> = { week: `W${w + 1}` };
-      trends.forEach((u) => { dataPoint[u.name] = u.weeklyPoints[w]; });
+      trends.forEach((u) => { dataPoint[truncateName(u.name)] = u.weeklyPoints[w]; });
       chartData.push(dataPoint);
     }
   }
@@ -225,7 +233,7 @@ export default function Leaderboard() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold">{entry.name}</span>
+                      <span className="font-semibold" title={entry.name}>{truncateName(entry.name)}</span>
                       <div className="flex items-center gap-1 flex-wrap">
                       {entry.weekHighScoreCount > 0 && (
                         <BadgePop emoji="🔥" count={entry.weekHighScoreCount} />
@@ -312,7 +320,7 @@ export default function Leaderboard() {
                   <Line
                     key={u.userId}
                     type="monotone"
-                    dataKey={u.name}
+                    dataKey={truncateName(u.name)}
                     stroke={getUserColor(u.userId, idx)}
                     strokeWidth={2.5}
                     dot={{ r: 3, strokeWidth: 2 }}

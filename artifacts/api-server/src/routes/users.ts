@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, usersTable, picksTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginUserBody } from "@workspace/api-zod";
+import { requireAdmin } from "../middleware/require-admin";
 
 const PROFILE_COLORS = [
   "#007AFF", "#FF6B35", "#34C759", "#AF52DE",
@@ -9,10 +10,22 @@ const PROFILE_COLORS = [
   "#00C7BE", "#30D158",
 ];
 
+const BOOTSTRAP_ADMIN_NAMES = new Set(["Bfabs"]);
+
 const router = Router();
 
+function getUserRole(u: typeof usersTable.$inferSelect) {
+  return u.role === "admin" || BOOTSTRAP_ADMIN_NAMES.has(u.name) ? "admin" : "member";
+}
+
 function serializeUser(u: typeof usersTable.$inferSelect) {
-  return { id: u.id, name: u.name, avatar: u.avatar ?? null, createdAt: u.createdAt.toISOString() };
+  return {
+    id: u.id,
+    name: u.name,
+    avatar: u.avatar ?? null,
+    role: getUserRole(u),
+    createdAt: u.createdAt.toISOString(),
+  };
 }
 
 router.post("/users/login", async (req, res) => {
@@ -30,8 +43,9 @@ router.post("/users/login", async (req, res) => {
   const takenColors = new Set(allUsers.map((u) => u.avatar).filter(Boolean));
   const available = PROFILE_COLORS.filter((c) => !takenColors.has(c));
   const color = available.length > 0 ? available[0] : PROFILE_COLORS[allUsers.length % PROFILE_COLORS.length];
+  const role = BOOTSTRAP_ADMIN_NAMES.has(name) ? "admin" : "member";
 
-  const [created] = await db.insert(usersTable).values({ name, avatar: color }).returning();
+  const [created] = await db.insert(usersTable).values({ name, avatar: color, role }).returning();
   res.status(201).json(serializeUser(created));
 });
 
@@ -77,7 +91,7 @@ router.patch("/users/:userId", async (req, res) => {
   res.json(serializeUser(updated));
 });
 
-router.delete("/users/:userId", async (req, res) => {
+router.delete("/users/:userId", requireAdmin, async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
   if (isNaN(userId)) { res.status(400).json({ error: "Invalid userId" }); return; }
 

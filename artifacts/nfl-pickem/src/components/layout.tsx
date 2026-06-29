@@ -184,7 +184,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
                 🏈
               </div>
-              <span className="font-semibold text-lg tracking-tight hidden sm:inline">Pick'em</span>
+              <span className="font-semibold text-lg tracking-tight hidden sm:inline">Pick'em 272</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">

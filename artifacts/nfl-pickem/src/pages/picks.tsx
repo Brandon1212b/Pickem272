@@ -33,7 +33,6 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { TeamLogo } from "@/lib/team-logos";
@@ -119,6 +118,7 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
+  const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem("picks_tutorial_seen"));
@@ -283,6 +283,14 @@ export default function Picks() {
     );
   }, [matchesByWeek, selectedTeamFilter]);
 
+  useEffect(() => {
+    if (selectedTeamFilter === "all") {
+      setExpandedWeeks(["1"]);
+    } else {
+      setExpandedWeeks(Object.keys(filteredMatchesByWeek));
+    }
+  }, [selectedTeamFilter, filteredMatchesByWeek]);
+
   // Team records from picks (computed here for both views)
   const teamRecordsSorted = useMemo(() => {
     if (!matches || !picks) return [];
@@ -335,7 +343,6 @@ export default function Picks() {
               && "border-green-500 ring-1 ring-green-500/40",
           )}
         >
-          <SelectValue className="sr-only" />
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {teamFilterActive && (
               <div
@@ -364,7 +371,12 @@ export default function Picks() {
                 teams.map((team) => {
                   const { complete, picked, total } = teamCompletionStatus[team] ?? { complete: false, picked: 0, total: 0 };
                   return (
-                    <SelectItem key={team} value={team} textValue={team}>
+                    <SelectItem
+                      key={team}
+                      value={team}
+                      textValue={team}
+                      className="pr-8 [&>span:first-child]:hidden"
+                    >
                       <div className="flex items-center gap-2 w-full pr-2">
                         <div
                           className={cn(
@@ -732,7 +744,12 @@ export default function Picks() {
       {teamFilterControl}
 
       {/* Week accordions */}
-      <Accordion type="multiple" defaultValue={["1"]} className="space-y-3">
+      <Accordion
+        type="multiple"
+        value={expandedWeeks}
+        onValueChange={setExpandedWeeks}
+        className="space-y-3"
+      >
         {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
           const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
           const weekComplete = weekPickCount === weekMatches.length;

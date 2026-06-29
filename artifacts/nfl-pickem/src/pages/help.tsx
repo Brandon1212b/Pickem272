@@ -49,7 +49,7 @@ export default function Help() {
           All <strong className="text-foreground">272 picks must be submitted before the season starts</strong> in September. Once the commissioner switches the league to "in-season" mode, the Picks page is locked — no more changes.
         </p>
         <p>
-          Once you've submitted all 288 picks, your picks are locked into a summary view. You can tap <strong className="text-foreground">Edit Picks</strong> to go back and make changes anytime before the season starts.
+          Once you've submitted all 272 picks, your picks are locked into a summary view. You can tap <strong className="text-foreground">Edit Picks</strong> to go back and make changes anytime before the season starts.
         </p>
         <p>
           Use the <strong className="text-foreground">Autofill</strong> tools on the Picks page to quickly fill in any games you haven't picked: home teams, point spread favorites, or random.
@@ -90,7 +90,7 @@ export default function Help() {
       <Section title="💡 Tips">
         <ul className="space-y-2 list-disc list-inside">
           <li>Save your picks often — the save button appears when you make changes.</li>
-          <li>Use "Submit All Picks" (turns green when all 288 are filled) to confirm your full ballot — it locks into a summary view.</li>
+          <li>Use "Submit All Picks" (turns green when all 272 are filled) to confirm your full ballot — it locks into a summary view.</li>
           <li>Check the Standings page for season trends and who's running hot.</li>
           <li>The Week tab shows pick splits — see which way the league is leaning on each game.</li>
           <li>Tap your rank (#) in the header to jump straight to Standings.</li>

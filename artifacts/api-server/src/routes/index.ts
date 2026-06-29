@@ -1,20 +1,14 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import usersRouter from "./users";
-import matchesRouter from "./matches";
-import picksRouter from "./picks";
-import leaderboardRouter from "./leaderboard";
-import smackboardRouter from "./smackboard";
-import adminRouter from "./admin";
-
-const router: IRouter = Router();
-
-router.use(healthRouter);
-router.use(usersRouter);
-router.use(matchesRouter);
-router.use(picksRouter);
-router.use(leaderboardRouter);
-router.use(smackboardRouter);
-router.use(adminRouter);
-
-export default router;
+diff --git a/artifacts/api-server/src/routes/index.ts b/artifacts/api-server/src/routes/index.ts
+index de5299e..0000000 100644
+--- a/artifacts/api-server/src/routes/index.ts
++++ b/artifacts/api-server/src/routes/index.ts
+@@
+ import smackboardRouter from "./smackboard";
+ import adminRouter from "./admin";
++import oddsRouter from "./odds";
+@@
+ router.use(smackboardRouter);
+ router.use(adminRouter);
++router.use(oddsRouter);
+ 
+ export default router;

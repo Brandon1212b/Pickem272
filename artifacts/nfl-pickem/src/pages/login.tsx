@@ -53,7 +53,7 @@ export default function Login() {
             <div className="w-20 h-20 mx-auto bg-primary rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-2xl shadow-primary/30">
               🏈
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Pick'em League</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Pick'em 272</h1>
             <p className="text-muted-foreground mt-1 text-sm">2026–27 NFL Season</p>
           </div>
 
@@ -108,7 +108,7 @@ export default function Login() {
           <div className="w-20 h-20 mx-auto bg-primary rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-2xl shadow-primary/30">
             🏈
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Pick'em League</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Pick'em 272</h1>
           <p className="text-muted-foreground mt-1 text-sm">2026–27 NFL Season</p>
         </div>
 

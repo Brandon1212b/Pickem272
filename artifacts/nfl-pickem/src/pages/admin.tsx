@@ -278,75 +278,6 @@ export default function Admin() {
           <p className="text-sm opacity-80">Actions taken here affect all users in the league.</p>
         </div>
       </div>
-
-      {/* Live NFL Scores widget */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Tv className="w-5 h-5" />
-                Live NFL Scores
-                {espnWeek && (
-                  <span className="text-sm font-normal text-muted-foreground ml-1">— Week {espnWeek}</span>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Auto-refreshes every 60s via ESPN.
-                {espnLastFetched && (
-                  <span className="ml-1">
-                    Last updated {espnLastFetched.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}.
-                  </span>
-                )}
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={loadEspnScores} disabled={espnLoading}>
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${espnLoading ? "animate-spin" : ""}`} />
-              {espnLoading ? "Loading…" : "Refresh"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {espnError && (
-            <div className="text-destructive text-sm bg-destructive/10 rounded-lg p-3">
-              Could not load ESPN scores: {espnError}
-            </div>
-          )}
-          {!espnError && espnGames.length === 0 && !espnLoading && (
-            <p className="text-muted-foreground text-sm text-center py-4">
-              No games currently on ESPN scoreboard (off-season or no games today).
-            </p>
-          )}
-          {espnGames.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {espnGames.map((game, i) => (
-                <div key={i} className="flex items-center justify-between p-2.5 border rounded-xl bg-card text-sm">
-                  <div className="flex items-center gap-2">
-                    <TeamLogo team={game.awayTeam} size={18} />
-                    <span className={`font-semibold ${game.winner === game.awayTeam ? "text-green-400" : ""}`}>
-                      {game.awayTeam}
-                    </span>
-                    <span className="text-lg font-bold tabular-nums">{game.awayScore}</span>
-                    <span className="text-muted-foreground text-xs">–</span>
-                    <span className="text-lg font-bold tabular-nums">{game.homeScore}</span>
-                    <span className={`font-semibold ${game.winner === game.homeTeam ? "text-green-400" : ""}`}>
-                      {game.homeTeam}
-                    </span>
-                    <TeamLogo team={game.homeTeam} size={18} />
-                  </div>
-                  <Badge
-                    variant={game.completed ? "secondary" : "outline"}
-                    className={`text-[10px] shrink-0 ml-1 ${!game.completed && game.status.startsWith("Q") ? "bg-green-500/15 text-green-400 border-green-500/30" : ""}`}
-                  >
-                    {game.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Season Settings */}
       <Card>
         <CardHeader>
@@ -475,69 +406,60 @@ export default function Admin() {
                       const homeWon = match.winner === match.homeTeam;
 
                       return (
-                        <div key={match.id} className="p-3 border rounded-xl bg-card space-y-2">
-                          {/* Game time + live status */}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {match.gameTime && <span>{match.gameTime}</span>}
-                            {hasLive && (
-                              <Badge
-                                variant={live.completed ? "secondary" : "outline"}
-                                className={`text-[10px] ${live.status.startsWith("Q") ? "bg-green-500/15 text-green-400 border-green-500/30" : ""}`}
-                              >
-                                {live.status}
-                              </Badge>
-                            )}
-                            {match.isCompleted && !hasLive && (
-                              <Badge variant="secondary" className="text-[10px]">Final</Badge>
+                        <div key={match.id} className="flex items-center gap-2 p-2 border rounded-xl bg-card text-sm">
+                          <button
+                            onClick={() => handleSetWinner(match.id, match.awayTeam)}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-all font-semibold flex-1 min-w-0
+                              ${awayWon
+                                ? "border-green-500 bg-green-500/15 text-green-400"
+                                : match.isCompleted
+                                ? "border-border/40 bg-secondary/20 text-muted-foreground opacity-50"
+                                : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-primary/10 cursor-pointer"
+                              }`}
+                          >
+                            <TeamLogo team={match.awayTeam} size={18} className="shrink-0" />
+                            <span className="truncate text-xs">{match.awayTeam}</span>
+                            {awayWon && <span className="shrink-0">✓</span>}
+                          </button>
+                        
+                          <div className="flex items-center gap-1 shrink-0">
+                            {hasLive ? (
+                              <>
+                                <span className="font-bold tabular-nums">{live.awayScore}</span>
+                                <span className="text-muted-foreground">–</span>
+                                <span className="font-bold tabular-nums">{live.homeScore}</span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ?? "—"}</span>
                             )}
                           </div>
-
-                          {/* Away and Home team winner buttons */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Away team */}
-                            <button
-                              onClick={() => handleSetWinner(match.id, match.awayTeam)}
-                              disabled={false}
-                              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold
-                                ${awayWon
-                                  ? "border-green-500 bg-green-500/15 text-green-400"
-                                  : match.isCompleted
-                                  ? "border-border/40 bg-secondary/20 text-muted-foreground opacity-50 cursor-not-allowed"
-                                  : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-primary/10 cursor-pointer"
-                                }`}
+                        
+                          <button
+                            onClick={() => handleSetWinner(match.id, match.homeTeam)}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-all font-semibold flex-1 min-w-0 justify-end
+                              ${homeWon
+                                ? "border-green-500 bg-green-500/15 text-green-400"
+                                : match.isCompleted
+                                ? "border-border/40 bg-secondary/20 text-muted-foreground opacity-50"
+                                : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-primary/10 cursor-pointer"
+                              }`}
+                          >
+                            {homeWon && <span className="shrink-0">✓</span>}
+                            <span className="truncate text-xs">{match.homeTeam}</span>
+                            <TeamLogo team={match.homeTeam} size={18} className="shrink-0" />
+                          </button>
+                        
+                          {hasLive && (
+                            <Badge
+                              variant={live.completed ? "secondary" : "outline"}
+                              className={`text-[10px] shrink-0 ${live.status.startsWith("Q") ? "bg-green-500/15 text-green-400 border-green-500/30" : ""}`}
                             >
-                              <TeamLogo team={match.awayTeam} size={20} className="shrink-0" />
-                              <span className="truncate">{match.awayTeam}</span>
-                              {hasLive && (
-                                <span className="ml-auto text-base font-bold tabular-nums shrink-0">
-                                  {live.awayScore}
-                                </span>
-                              )}
-                              {awayWon && <span className="ml-auto text-green-400 shrink-0">✓</span>}
-                            </button>
-
-                            {/* Home team */}
-                            <button
-                              onClick={() => handleSetWinner(match.id, match.homeTeam)}
-                              disabled={false}
-                              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold
-                                ${homeWon
-                                  ? "border-green-500 bg-green-500/15 text-green-400"
-                                  : match.isCompleted
-                                  ? "border-border/40 bg-secondary/20 text-muted-foreground opacity-50 cursor-not-allowed"
-                                  : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-primary/10 cursor-pointer"
-                                }`}
-                            >
-                              <TeamLogo team={match.homeTeam} size={20} className="shrink-0" />
-                              <span className="truncate">{match.homeTeam}</span>
-                              {hasLive && (
-                                <span className="ml-auto text-base font-bold tabular-nums shrink-0">
-                                  {live.homeScore}
-                                </span>
-                              )}
-                              {homeWon && <span className="ml-auto text-green-400 shrink-0">✓</span>}
-                            </button>
-                          </div>
+                              {live.status}
+                            </Badge>
+                          )}
+                          {match.isCompleted && !hasLive && (
+                            <Badge variant="secondary" className="text-[10px] shrink-0">Final</Badge>
+                          )}
                         </div>
                       );
                     })}

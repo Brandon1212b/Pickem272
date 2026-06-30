@@ -79,9 +79,9 @@ async function fetchEspnScores(): Promise<{ week: number | null; games: EspnGame
     const period: number = comp?.status?.period ?? 0;
     const clock: string = comp?.status?.displayClock ?? "";
 
-    let : string;
+    let statusLabel: string;
     if (completed) {
-       = "Final";
+      statusLabel = "Final";
     } else if (period > 0) {
        = `Q${period} ${clock}`;
     } else {

@@ -441,7 +441,7 @@ export default function Admin() {
                                 <span className="font-bold tabular-nums">{live.homeScore}</span>
                               </>
                             ) : (
-                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ? match.gameTime.replace(/\s*(AM|PM)\s*EST/i, "") : "—"}</span>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ? match.gameTime.replace(/\s*(AM|PM)\s*EDT/i, "") : "—"}</span>
                             )}
                           </div>
                         

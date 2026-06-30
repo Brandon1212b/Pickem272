@@ -543,38 +543,6 @@ export default function Picks() {
           </div>
         )}
 
-        {teamFilterControl}
-
-        {/* Current week */}
-        {currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
-
-        {/* Past weeks — most recent first */}
-        {pastWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
-
-        {/* Future weeks — collapsed section (all weeks shown when team filter active) */}
-        {futureWeekEntries.length > 0 && (
-          teamFilterActive ? (
-            <div className="space-y-3">
-              {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
-            </div>
-          ) : (
-          <div>
-            <button
-              onClick={() => setShowFutureWeeks((v) => !v)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2 w-full"
-            >
-              <ChevronDown className={`w-4 h-4 transition-transform ${showFutureWeeks ? "rotate-180" : ""}`} />
-              {showFutureWeeks ? "Hide" : "Show"} future weeks ({futureWeekEntries.length})
-            </button>
-            {showFutureWeeks && (
-              <div className="space-y-3 mt-2">
-                {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
-              </div>
-            )}
-          </div>
-          )
-        )}
-
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
           const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
@@ -623,6 +591,38 @@ export default function Picks() {
             </Card>
           );
         })()}
+
+        {teamFilterControl}
+
+        {/* Current week */}
+        {currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
+
+        {/* Past weeks — most recent first */}
+        {pastWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
+
+        {/* Future weeks — collapsed section (all weeks shown when team filter active) */}
+        {futureWeekEntries.length > 0 && (
+          teamFilterActive ? (
+            <div className="space-y-3">
+              {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
+            </div>
+          ) : (
+          <div>
+            <button
+              onClick={() => setShowFutureWeeks((v) => !v)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2 w-full"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFutureWeeks ? "rotate-180" : ""}`} />
+              {showFutureWeeks ? "Hide" : "Show"} future weeks ({futureWeekEntries.length})
+            </button>
+            {showFutureWeeks && (
+              <div className="space-y-3 mt-2">
+                {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
+              </div>
+            )}
+          </div>
+          )
+        )}
       </div>
     );
   }
@@ -669,27 +669,6 @@ export default function Picks() {
             <strong className="text-foreground">{countdown.days}d {countdown.hours}h {countdown.minutes}m {countdown.seconds}s</strong>
             {" "}— once the season starts, no more changes!
           </span>
-        </div>
-      )}
-
-      {/* Autofill section */}
-      {status?.mode === "pre-season" && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Quick Pick Autofill</p>
-          <div className="flex gap-2 flex-wrap">
-            {AUTOFILL_OPTIONS.map(({ mode, label, icon: Icon }) => (
-              <Button
-                key={mode}
-                variant="outline"
-                size="sm"
-                onClick={() => setPendingAutofill(mode)}
-                disabled={autofillPicks.isPending || unpickedCount === 0}
-              >
-                <Icon className="w-4 h-4 mr-2" />
-                {label}
-              </Button>
-            ))}
-          </div>
         </div>
       )}
 
@@ -742,6 +721,27 @@ export default function Picks() {
       })()}
 
       {teamFilterControl}
+
+      {/* Autofill section */}
+      {status?.mode === "pre-season" && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Quick Pick Autofill</p>
+          <div className="flex gap-2 flex-wrap">
+            {AUTOFILL_OPTIONS.map(({ mode, label, icon: Icon }) => (
+              <Button
+                key={mode}
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingAutofill(mode)}
+                disabled={autofillPicks.isPending || unpickedCount === 0}
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Week accordions */}
       <Accordion

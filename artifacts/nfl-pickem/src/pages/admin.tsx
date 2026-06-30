@@ -85,7 +85,7 @@ async function fetchEspnScores(): Promise<{ week: number | null; games: EspnGame
     } else if (period > 0) {
        = `Q${period} ${clock}`;
     } else {
-      statusLabel = statusType.shortDetail?.replace(/\s*[ap]m\s*e[ds]t.*$/i, "") ?? statusType.description ?? "—";
+      statusLabel = statusType.shortDetail ?? statusType.description ?? "—";
     }
 
     const awayAbbr = normalizeEspn(away?.team?.abbreviation ?? "");
@@ -441,7 +441,7 @@ export default function Admin() {
                                 <span className="font-bold tabular-nums">{live.homeScore}</span>
                               </>
                             ) : (
-                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ? match.gameTime.replace(/\s*(AM|PM).*$/i, "") : "—"}</span>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ?? "—"}</span>
                             )}
                           </div>
                         

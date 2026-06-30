@@ -83,7 +83,7 @@ async function fetchEspnScores(): Promise<{ week: number | null; games: EspnGame
     if (completed) {
       statusLabel = "Final";
     } else if (period > 0) {
-       = `Q${period} ${clock}`;
+       statusLabel = `Q${period} ${clock}`;
     } else {
       statusLabel = statusType.shortDetail ?? statusType.description ?? "—";
     }

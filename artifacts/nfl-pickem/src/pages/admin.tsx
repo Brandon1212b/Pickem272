@@ -367,10 +367,21 @@ export default function Admin() {
       {/* Match Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Match Results</CardTitle>
-          <CardDescription>
-            Click a team button to set them as the winner. Live scores (if available) are shown inline.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Match Results</CardTitle>
+              <CardDescription>
+                Click a team button to set them as the winner. Live scores (if available) are shown inline.
+                {espnLastFetched && (
+                  <span className="ml-1">Last updated {espnLastFetched.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}.</span>
+                )}
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadEspnScores} disabled={espnLoading}>
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${espnLoading ? "animate-spin" : ""}`} />
+              {espnLoading ? "Loading…" : "Refresh"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="space-y-2">
@@ -430,7 +441,7 @@ export default function Admin() {
                                 <span className="font-bold tabular-nums">{live.homeScore}</span>
                               </>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ?? "—"}</span>
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ? match.gameTime.replace(/\s*(AM|PM)\s*EST/i, "") : "—"}</span>
                             )}
                           </div>
                         

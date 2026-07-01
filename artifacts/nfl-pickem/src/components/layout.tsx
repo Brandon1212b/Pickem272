@@ -167,7 +167,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  const activeWeek = (status?.lastCompletedWeek ?? 0) + 1;
+  const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
 
   const navItems = [
     { href: "/picks", label: "My Picks", icon: Grid },

@@ -126,7 +126,7 @@ export default function Dashboard() {
   });
 
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
-  const activeWeek = (status?.lastCompletedWeek ?? 0) + 1;
+  const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
   const displayWeek = selectedWeek ?? activeWeek;
 
   // Fetch pick popularity for the selected week via direct fetch (supports week param)

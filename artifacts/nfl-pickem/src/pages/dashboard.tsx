@@ -6,18 +6,11 @@ import {
   useListMatches,
   useGetUserPicks,
   useGetLeaderboard,
-  useListSmackMessages,
-  usePostSmackMessage,
   getGetUserPicksQueryKey,
-  getListSmackMessagesQueryKey,
 } from "@workspace/api-client-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { TeamLogo } from "@/lib/team-logos";
 import { getTeamColor } from "@/lib/team-colors";
 
@@ -101,8 +94,6 @@ interface PopularityItem {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-  const [smackText, setSmackText] = useState("");
   // null = default (active week), number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
@@ -112,18 +103,6 @@ export default function Dashboard() {
     query: { enabled: !!user?.id, queryKey: getGetUserPicksQueryKey(user?.id || 0) },
   });
   const { data: leaderboard } = useGetLeaderboard();
-  const { data: smackMessages } = useListSmackMessages({
-    query: { refetchInterval: 15000, queryKey: getListSmackMessagesQueryKey() },
-  });
-
-  const postSmack = usePostSmackMessage({
-    mutation: {
-      onSuccess: () => {
-        setSmackText("");
-        queryClient.invalidateQueries({ queryKey: getListSmackMessagesQueryKey() });
-      },
-    },
-  });
 
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
@@ -148,12 +127,6 @@ export default function Dashboard() {
     }
     return map;
   }, [leaderboard]);
-
-  const handleSmackSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!smackText.trim() || !user) return;
-    postSmack.mutate({ data: { name: user.name, message: smackText.substring(0, 280) } });
-  };
 
   if (!user) return null;
 
@@ -323,42 +296,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Smack Board */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Smack Board</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="h-[300px] overflow-y-auto space-y-3 pr-1 flex flex-col">
-            {[...(smackMessages || [])].map((msg) => (
-              <div key={msg.id} className="bg-secondary/40 p-3 rounded-xl border">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">{msg.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
-                  </span>
-                </div>
-                <p className="text-sm">{msg.message}</p>
-              </div>
-            ))}
-            {(!smackMessages || smackMessages.length === 0) && (
-              <div className="text-center py-8 text-muted-foreground">No smack talk yet. Be the first!</div>
-            )}
-          </div>
-          <form onSubmit={handleSmackSubmit} className="flex gap-2 pt-2">
-            <Input
-              value={smackText}
-              onChange={(e) => setSmackText(e.target.value)}
-              placeholder="Talk some smack..."
-              maxLength={280}
-              disabled={postSmack.isPending}
-            />
-            <Button type="submit" disabled={!smackText.trim() || postSmack.isPending}>
-              <Send className="w-4 h-4" />
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }

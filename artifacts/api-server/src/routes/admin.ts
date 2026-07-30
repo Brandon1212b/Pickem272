@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, matchesTable, picksTable, seasonConfigTable, usersTable } from "@workspace/db";
+import { db, matchesTable, picksTable, seasonConfigTable, usersTable, storylinesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { SetMatchResultParams, SetMatchResultBody, UpdateSeasonModeBody } from "@workspace/api-zod";
 
@@ -94,6 +94,30 @@ router.get("/admin/users/last-pick-updates", async (_req, res) => {
       lastUpdated: r.lastUpdated.toISOString(),
     }))
   );
+});
+
+router.patch("/admin/weeks/:week/storyline", async (req, res) => {
+  const week = parseInt(req.params.week, 10);
+  if (isNaN(week) || week < 1 || week > 18) {
+    res.status(400).json({ error: "Invalid week" });
+    return;
+  }
+  const { text } = req.body as { text?: string };
+  if (typeof text !== "string" || text.length === 0) {
+    res.status(400).json({ error: "text is required" });
+    return;
+  }
+  const trimmed = text.substring(0, 2000);
+
+  const [existing] = await db.select().from(storylinesTable).where(eq(storylinesTable.week, week)).limit(1);
+  if (existing) {
+    await db.update(storylinesTable).set({ text: trimmed, updatedAt: new Date() }).where(eq(storylinesTable.week, week));
+  } else {
+    await db.insert(storylinesTable).values({ week, text: trimmed });
+  }
+
+  const [row] = await db.select().from(storylinesTable).where(eq(storylinesTable.week, week)).limit(1);
+  res.json({ week: row.week, text: row.text, updatedAt: row.updatedAt.toISOString() });
 });
 
 router.patch("/admin/season", async (req, res) => {

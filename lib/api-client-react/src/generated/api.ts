@@ -22,6 +22,7 @@ import type {
 import type {
   AutofillInput,
   BulkPickInput,
+  GetWeeklyRecapParams,
   HealthStatus,
   LeaderboardEntry,
   ListMatchesParams,
@@ -30,16 +31,20 @@ import type {
   Pick,
   PickPopularity,
   SeasonModeInput,
+  SeasonRecap,
   SeasonStatus,
   SmackMessage,
   SmackMessageInput,
+  StorylineInput,
+  StorylineResponse,
   TrendEntry,
   User,
   UserLogin,
   UserUpdateInput,
   WebhookInput,
   WebhookResult,
-  WeeklyExtremes
+  WeeklyExtremes,
+  WeeklyRecap
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1121,6 +1126,167 @@ export function useGetWeeklyExtremes<TData = Awaited<ReturnType<typeof getWeekly
 
 
 
+export const getGetWeeklyRecapUrl = (params?: GetWeeklyRecapParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/leaderboard/weekly-recap?${stringifiedParams}` : `/api/leaderboard/weekly-recap`
+}
+
+/**
+ * @summary League-wide pick trends, highlights, and storyline for a given week
+ */
+export const getWeeklyRecap = async (params?: GetWeeklyRecapParams, options?: RequestInit): Promise<WeeklyRecap> => {
+
+  return customFetch<WeeklyRecap>(getGetWeeklyRecapUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWeeklyRecapQueryKey = (params?: GetWeeklyRecapParams,) => {
+    return [
+    `/api/leaderboard/weekly-recap`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWeeklyRecapQueryOptions = <TData = Awaited<ReturnType<typeof getWeeklyRecap>>, TError = ErrorType<unknown>>(params?: GetWeeklyRecapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklyRecap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWeeklyRecapQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeeklyRecap>>> = ({ signal }) => getWeeklyRecap(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeeklyRecap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWeeklyRecapQueryResult = NonNullable<Awaited<ReturnType<typeof getWeeklyRecap>>>
+export type GetWeeklyRecapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary League-wide pick trends, highlights, and storyline for a given week
+ */
+
+export function useGetWeeklyRecap<TData = Awaited<ReturnType<typeof getWeeklyRecap>>, TError = ErrorType<unknown>>(
+ params?: GetWeeklyRecapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklyRecap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWeeklyRecapQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSeasonRecapUrl = () => {
+
+
+
+
+  return `/api/leaderboard/season-recap`
+}
+
+/**
+ * @summary Season-long achievements, streaks, and weekly winners
+ */
+export const getSeasonRecap = async ( options?: RequestInit): Promise<SeasonRecap> => {
+
+  return customFetch<SeasonRecap>(getGetSeasonRecapUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSeasonRecapQueryKey = () => {
+    return [
+    `/api/leaderboard/season-recap`
+    ] as const;
+    }
+
+
+export const getGetSeasonRecapQueryOptions = <TData = Awaited<ReturnType<typeof getSeasonRecap>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSeasonRecap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSeasonRecapQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSeasonRecap>>> = ({ signal }) => getSeasonRecap({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSeasonRecap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSeasonRecapQueryResult = NonNullable<Awaited<ReturnType<typeof getSeasonRecap>>>
+export type GetSeasonRecapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Season-long achievements, streaks, and weekly winners
+ */
+
+export function useGetSeasonRecap<TData = Awaited<ReturnType<typeof getSeasonRecap>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSeasonRecap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSeasonRecapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetPickPopularityUrl = () => {
 
 
@@ -1635,5 +1801,77 @@ export const useUpdateSeasonMode = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateSeasonModeMutationOptions(options));
+    }
+
+export const getSetWeekStorylineUrl = (week: number,) => {
+
+
+
+
+  return `/api/admin/weeks/${week}/storyline`
+}
+
+/**
+ * @summary Set or update the commissioner's storyline text for a week
+ */
+export const setWeekStoryline = async (week: number,
+    storylineInput: StorylineInput, options?: RequestInit): Promise<StorylineResponse> => {
+
+  return customFetch<StorylineResponse>(getSetWeekStorylineUrl(week),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      storylineInput,)
+  }
+);}
+
+
+
+
+export const getSetWeekStorylineMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setWeekStoryline>>, TError,{week: number;data: BodyType<StorylineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setWeekStoryline>>, TError,{week: number;data: BodyType<StorylineInput>}, TContext> => {
+
+const mutationKey = ['setWeekStoryline'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setWeekStoryline>>, {week: number;data: BodyType<StorylineInput>}> = (props) => {
+          const {week,data} = props ?? {};
+
+          return  setWeekStoryline(week,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetWeekStorylineMutationResult = NonNullable<Awaited<ReturnType<typeof setWeekStoryline>>>
+    export type SetWeekStorylineMutationBody = BodyType<StorylineInput>
+    export type SetWeekStorylineMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Set or update the commissioner's storyline text for a week
+ */
+export const useSetWeekStoryline = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setWeekStoryline>>, TError,{week: number;data: BodyType<StorylineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setWeekStoryline>>,
+        TError,
+        {week: number;data: BodyType<StorylineInput>},
+        TContext
+      > => {
+      return useMutation(getSetWeekStorylineMutationOptions(options));
     }
 

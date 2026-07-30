@@ -5,6 +5,7 @@ import {
   useSetMatchResult,
   useUpdateSeasonMode,
   useListUsers,
+  useSetWeekStoryline,
   getListMatchesQueryKey,
   getGetSeasonStatusQueryKey,
   getListUsersQueryKey,
@@ -28,7 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw, Tv, Trash2, RotateCcw, Users } from "lucide-react";
+import { AlertTriangle, RefreshCw, Tv, Trash2, RotateCcw, Users, Newspaper } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { TeamLogo } from "@/lib/team-logos";
 
 // ── ESPN live score types ─────────────────────────────────────────────────────
@@ -123,6 +125,41 @@ export default function Admin() {
   const [resettingWeek, setResettingWeek] = useState(false);
   const [deletingUser, setDeletingUser] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
+  // Storyline editor state
+  const [storylineWeek, setStorylineWeek] = useState<number>(1);
+  const [storylineText, setStorylineText] = useState("");
+  const [storylineSaving, setStorylineSaving] = useState(false);
+
+  const setWeekStoryline = useSetWeekStoryline({
+    mutation: {
+      onSuccess: () => {
+        toast.success(`Week ${storylineWeek} storyline saved`);
+        setStorylineSaving(false);
+      },
+      onError: () => {
+        toast.error("Failed to save storyline");
+        setStorylineSaving(false);
+      },
+    },
+  });
+
+  const handleSaveStoryline = async () => {
+    if (!storylineText.trim()) return;
+    setStorylineSaving(true);
+    setWeekStoryline.mutate({ week: storylineWeek, data: { text: storylineText.trim() } });
+  };
+
+  // Load existing storyline when week changes
+  useEffect(() => {
+    setStorylineText("");
+    fetch(`/api/leaderboard/weekly-recap?week=${storylineWeek}`)
+      .then((r) => r.json())
+      .then((data: { storyline?: string | null }) => {
+        if (data.storyline) setStorylineText(data.storyline);
+      })
+      .catch(() => { /* ignore */ });
+  }, [storylineWeek]);
 
   const handleSeedMatches = async () => {
     setSeeding(true);
@@ -303,6 +340,52 @@ export default function Admin() {
             </div>
             <Button size="sm" variant="outline" onClick={handleSeedMatches} disabled={seeding}>
               {seeding ? "Seeding…" : "Seed Matches"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Storyline */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Newspaper className="w-5 h-5" />
+            Weekly Storyline
+          </CardTitle>
+          <CardDescription>Write a short summary for the selected week — shown at the top of the League Recap page.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {Array.from({ length: 18 }, (_, i) => i + 1).map((week) => (
+              <button
+                key={week}
+                onClick={() => setStorylineWeek(week)}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  storylineWeek === week
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                W{week}
+              </button>
+            ))}
+          </div>
+          <Textarea
+            value={storylineText}
+            onChange={(e) => setStorylineText(e.target.value)}
+            placeholder={`Write a storyline for Week ${storylineWeek}… e.g. "The Ravens came in as heavy favorites but it was the underdog Browns who stunned the league…"`}
+            rows={5}
+            maxLength={2000}
+            className="resize-none text-sm"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{storylineText.length}/2000 characters</span>
+            <Button
+              size="sm"
+              onClick={handleSaveStoryline}
+              disabled={!storylineText.trim() || storylineSaving}
+            >
+              {storylineSaving ? "Saving…" : `Save Week ${storylineWeek} Storyline`}
             </Button>
           </div>
         </CardContent>

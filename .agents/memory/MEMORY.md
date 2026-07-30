@@ -11,3 +11,4 @@
 - [Autofill modes](autofill-modes.md) — home | away | favorites | random; "away" added to OpenAPI spec + backend; favorites defaults to home when no spread data
 - [Picks page lock bugs](picks-lock-bugs.md) — skipHasUnsavedChangesReset ref prevents useEffect from clearing hasUnsavedChanges after autofill; reset must DELETE /api/picks/user/:userId/clear to clear server picks
 - [Dashboard week switcher](dashboard-week-switcher.md) — selectedWeek state (null=active); direct useQuery fetch to /api/leaderboard/pick-popularity?week=N; resets to null on navigate
+- [Weekly Recap Page](weekly-recap-page.md) — /recap replaces My Picks nav in-season; storylines table; 3 new API endpoints; Smack Board moved here

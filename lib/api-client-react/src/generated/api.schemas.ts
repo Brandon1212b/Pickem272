@@ -191,7 +191,102 @@ export interface SeasonModeInput {
   mode: SeasonModeInputMode;
 }
 
+export interface StorylineInput {
+  /** @maxLength 2000 */
+  text: string;
+}
+
+export interface StorylineResponse {
+  week: number;
+  text: string;
+  updatedAt: string;
+}
+
+export interface TeamPickTrend {
+  team: string;
+  pickCount: number;
+  pickPct: number;
+  pickerNames: string[];
+}
+
+export interface GamePickSplit {
+  matchId: number;
+  awayTeam: string;
+  homeTeam: string;
+  awayPickPct: number;
+  homePickPct: number;
+  awayPickCount: number;
+  homePickCount: number;
+  splitScore: number;
+  /** @nullable */
+  gameTime: string | null;
+  isCompleted: boolean;
+  /** @nullable */
+  winner: string | null;
+}
+
+export type WeeklyHighlightType = typeof WeeklyHighlightType[keyof typeof WeeklyHighlightType];
+
+
+export const WeeklyHighlightType = {
+  'biggest-upset': 'biggest-upset',
+  'most-popular-upset': 'most-popular-upset',
+  'consensus-pick': 'consensus-pick',
+  'nobody-picked': 'nobody-picked',
+  'closest-split': 'closest-split',
+  'upset-watch': 'upset-watch',
+} as const;
+
+export interface WeeklyHighlight {
+  type: WeeklyHighlightType;
+  headline: string;
+  detail: string;
+  /** @nullable */
+  team?: string | null;
+}
+
+export interface WeeklyRecap {
+  week: number;
+  /** @nullable */
+  storyline?: string | null;
+  userCount: number;
+  mostPicked: TeamPickTrend[];
+  leastPicked: TeamPickTrend[];
+  biggestSplits: GamePickSplit[];
+  nobodyPicked: string[];
+  highlights: WeeklyHighlight[];
+}
+
+export interface SeasonAchievement {
+  type: string;
+  label: string;
+  userId: number;
+  name: string;
+  /** @nullable */
+  avatar?: string | null;
+  value: number;
+  detail: string;
+}
+
+export interface WeeklyWinner {
+  week: number;
+  userId: number;
+  name: string;
+  /** @nullable */
+  avatar?: string | null;
+  points: number;
+}
+
+export interface SeasonRecap {
+  achievements: SeasonAchievement[];
+  weeklyWinners: WeeklyWinner[];
+}
+
 export type ListMatchesParams = {
+week?: number;
+};
+
+export type GetWeeklyRecapParams = {
 week?: number;
 };
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield } from "lucide-react";
+import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield, Newspaper } from "lucide-react";
 import {
   useGetLeaderboard,
   useGetSeasonStatus,
@@ -168,9 +168,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
+  const isInSeason = status?.mode === "in-season";
 
   const navItems = [
-    { href: "/picks", label: "My Picks", icon: Grid },
+    isInSeason
+      ? { href: "/recap", label: "Recap", icon: Newspaper }
+      : { href: "/picks", label: "My Picks", icon: Grid },
     { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard },
     { href: "/leaderboard", label: "Standings", icon: Trophy },
   ];

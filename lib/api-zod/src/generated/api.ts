@@ -299,6 +299,75 @@ export const GetWeeklyExtremesResponse = zod.object({
 
 
 /**
+ * @summary League-wide pick trends, highlights, and storyline for a given week
+ */
+export const GetWeeklyRecapQueryParams = zod.object({
+  "week": zod.coerce.number().optional()
+})
+
+export const GetWeeklyRecapResponse = zod.object({
+  "week": zod.number(),
+  "storyline": zod.string().nullish(),
+  "userCount": zod.number(),
+  "mostPicked": zod.array(zod.object({
+  "team": zod.string(),
+  "pickCount": zod.number(),
+  "pickPct": zod.number(),
+  "pickerNames": zod.array(zod.string())
+})),
+  "leastPicked": zod.array(zod.object({
+  "team": zod.string(),
+  "pickCount": zod.number(),
+  "pickPct": zod.number(),
+  "pickerNames": zod.array(zod.string())
+})),
+  "biggestSplits": zod.array(zod.object({
+  "matchId": zod.number(),
+  "awayTeam": zod.string(),
+  "homeTeam": zod.string(),
+  "awayPickPct": zod.number(),
+  "homePickPct": zod.number(),
+  "awayPickCount": zod.number(),
+  "homePickCount": zod.number(),
+  "splitScore": zod.number(),
+  "gameTime": zod.string().nullable(),
+  "isCompleted": zod.boolean(),
+  "winner": zod.string().nullable()
+})),
+  "nobodyPicked": zod.array(zod.string()),
+  "highlights": zod.array(zod.object({
+  "type": zod.enum(['biggest-upset', 'most-popular-upset', 'consensus-pick', 'nobody-picked', 'closest-split', 'upset-watch']),
+  "headline": zod.string(),
+  "detail": zod.string(),
+  "team": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Season-long achievements, streaks, and weekly winners
+ */
+export const GetSeasonRecapResponse = zod.object({
+  "achievements": zod.array(zod.object({
+  "type": zod.string(),
+  "label": zod.string(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "avatar": zod.string().nullish(),
+  "value": zod.number(),
+  "detail": zod.string()
+})),
+  "weeklyWinners": zod.array(zod.object({
+  "week": zod.number(),
+  "userId": zod.number(),
+  "name": zod.string(),
+  "avatar": zod.string().nullish(),
+  "points": zod.number()
+}))
+})
+
+
+/**
  * @summary Percentage of league that picked each team per match
  */
 export const GetPickPopularityResponseItem = zod.object({
@@ -402,6 +471,28 @@ export const UpdateSeasonModeResponse = zod.object({
   "mode": zod.enum(['pre-season', 'in-season']),
   "lastCompletedWeek": zod.number(),
   "seasonLocked": zod.boolean()
+})
+
+
+/**
+ * @summary Set or update the commissioner's storyline text for a week
+ */
+export const SetWeekStorylineParams = zod.object({
+  "week": zod.coerce.number()
+})
+
+export const setWeekStorylineBodyTextMax = 2000;
+
+
+
+export const SetWeekStorylineBody = zod.object({
+  "text": zod.string().max(setWeekStorylineBodyTextMax)
+})
+
+export const SetWeekStorylineResponse = zod.object({
+  "week": zod.number(),
+  "text": zod.string(),
+  "updatedAt": zod.string()
 })
 
 

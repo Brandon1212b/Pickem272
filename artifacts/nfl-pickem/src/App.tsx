@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard";
 import Leaderboard from "@/pages/leaderboard";
 import Admin from "@/pages/admin";
 import Help from "@/pages/help";
+import Recap from "@/pages/recap";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Login} />
         <Route path="/picks" component={Picks} />
+        <Route path="/recap" component={Recap} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/leaderboard" component={Leaderboard} />
         <Route path="/admin" component={Admin} />

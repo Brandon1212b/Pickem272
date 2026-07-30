@@ -302,6 +302,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/WeeklyExtremes"
 
+  /leaderboard/weekly-recap:
+    get:
+      operationId: getWeeklyRecap
+      tags: [leaderboard]
+      summary: League-wide pick trends, highlights, and storyline for a given week
+      parameters:
+        - name: week
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyRecap"
+
+  /leaderboard/season-recap:
+    get:
+      operationId: getSeasonRecap
+      tags: [leaderboard]
+      summary: Season-long achievements, streaks, and weekly winners
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeasonRecap"
+
   /leaderboard/pick-popularity:
     get:
       operationId: getPickPopularity
@@ -426,6 +458,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SeasonStatus"
+
+  /admin/weeks/{week}/storyline:
+    patch:
+      operationId: setWeekStoryline
+      tags: [admin]
+      summary: Set or update the commissioner's storyline text for a week
+      parameters:
+        - name: week
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorylineInput"
+      responses:
+        "200":
+          description: Storyline saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorylineResponse"
 
 components:
   schemas:
@@ -712,3 +769,156 @@ components:
         mode:
           type: string
           enum: [pre-season, in-season]
+
+    StorylineInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 2000
+
+    StorylineResponse:
+      type: object
+      required: [week, text, updatedAt]
+      properties:
+        week:
+          type: integer
+        text:
+          type: string
+        updatedAt:
+          type: string
+
+    TeamPickTrend:
+      type: object
+      required: [team, pickCount, pickPct, pickerNames]
+      properties:
+        team:
+          type: string
+        pickCount:
+          type: integer
+        pickPct:
+          type: number
+        pickerNames:
+          type: array
+          items:
+            type: string
+
+    GamePickSplit:
+      type: object
+      required: [matchId, awayTeam, homeTeam, awayPickPct, homePickPct, awayPickCount, homePickCount, splitScore, gameTime, isCompleted, winner]
+      properties:
+        matchId:
+          type: integer
+        awayTeam:
+          type: string
+        homeTeam:
+          type: string
+        awayPickPct:
+          type: number
+        homePickPct:
+          type: number
+        awayPickCount:
+          type: integer
+        homePickCount:
+          type: integer
+        splitScore:
+          type: number
+        gameTime:
+          type: ["string", "null"]
+        isCompleted:
+          type: boolean
+        winner:
+          type: ["string", "null"]
+
+    WeeklyHighlight:
+      type: object
+      required: [type, headline, detail]
+      properties:
+        type:
+          type: string
+          enum: [biggest-upset, most-popular-upset, consensus-pick, nobody-picked, closest-split, upset-watch]
+        headline:
+          type: string
+        detail:
+          type: string
+        team:
+          type: ["string", "null"]
+
+    WeeklyRecap:
+      type: object
+      required: [week, userCount, mostPicked, leastPicked, biggestSplits, nobodyPicked, highlights]
+      properties:
+        week:
+          type: integer
+        storyline:
+          type: ["string", "null"]
+        userCount:
+          type: integer
+        mostPicked:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamPickTrend"
+        leastPicked:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamPickTrend"
+        biggestSplits:
+          type: array
+          items:
+            $ref: "#/components/schemas/GamePickSplit"
+        nobodyPicked:
+          type: array
+          items:
+            type: string
+        highlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyHighlight"
+
+    SeasonAchievement:
+      type: object
+      required: [type, label, userId, name, value, detail]
+      properties:
+        type:
+          type: string
+        label:
+          type: string
+        userId:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        value:
+          type: number
+        detail:
+          type: string
+
+    WeeklyWinner:
+      type: object
+      required: [week, userId, name, points]
+      properties:
+        week:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        points:
+          type: integer
+
+    SeasonRecap:
+      type: object
+      required: [achievements, weeklyWinners]
+      properties:
+        achievements:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeasonAchievement"
+        weeklyWinners:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyWinner"

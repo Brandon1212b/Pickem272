@@ -131,6 +131,7 @@ export default function Picks() {
 
   // Skip resetting hasUnsavedChanges after autofill refetch
   const skipHasUnsavedChangesReset = useRef(false);
+  const weekListTopRef = useRef<HTMLDivElement>(null);
 
   // Refs for reading inside callbacks
   const localPicksRef = useRef<Record<number, string>>({});
@@ -752,7 +753,7 @@ export default function Picks() {
       {/* Week accordions / flat list */}
       {teamFilterActive ? (
         // Team filter active — one match per week, no accordion needed
-        <div className="space-y-2">
+        <div className="space-y-2" ref={weekListTopRef}>
           {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
             const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
             const weekComplete = weekPickCount === weekMatches.length;
@@ -822,7 +823,7 @@ export default function Picks() {
             return (
               <div className="flex items-center justify-between gap-3 pt-1">
                 <button
-                  onClick={() => { if (prevTeam) { setSelectedTeamFilter(prevTeam); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
+                  onClick={() => { if (prevTeam) { setSelectedTeamFilter(prevTeam); weekListTopRef.current?.scrollIntoView({ behavior: "smooth" }); } }}
                   disabled={!prevTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-start"
                 >
@@ -831,7 +832,7 @@ export default function Picks() {
                   <span className="truncate">{prevTeam ?? "—"}</span>
                 </button>
                 <button
-                  onClick={() => { if (nextTeam) { setSelectedTeamFilter(nextTeam); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
+                  onClick={() => { if (nextTeam) { setSelectedTeamFilter(nextTeam); weekListTopRef.current?.scrollIntoView({ behavior: "smooth" }); } }}
                   disabled={!nextTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-end"
                 >

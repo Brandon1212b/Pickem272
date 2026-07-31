@@ -749,43 +749,25 @@ export default function Picks() {
         </div>
       )}
 
-      {/* Week accordions */}
-      <Accordion
-        type="multiple"
-        value={expandedWeeks}
-        onValueChange={setExpandedWeeks}
-        className="space-y-3"
-      >
-        {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
-          const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
-          const weekComplete = weekPickCount === weekMatches.length;
-
-          return (
-            <AccordionItem key={week} value={week} className="bg-card border rounded-xl overflow-hidden px-1">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center justify-between w-full pr-4">
-                  <span className="font-semibold text-base flex items-center gap-2">
+      {/* Week accordions / flat list */}
+      {teamFilterActive ? (
+        // Team filter active — one match per week, no accordion needed
+        <div className="space-y-2">
+          {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
+            const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
+            const weekComplete = weekPickCount === weekMatches.length;
+            return (
+              <div key={week} className="bg-card border rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b">
+                  <span className="font-semibold text-sm flex items-center gap-2">
                     Week {week}
-                    {weekComplete && (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    )}
+                    {weekComplete && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
                   </span>
-                  <span className={`text-sm font-normal ${weekComplete ? "text-green-500 font-semibold" : "text-muted-foreground"}`}>
+                  <span className={`text-xs font-normal ${weekComplete ? "text-green-500 font-semibold" : "text-muted-foreground"}`}>
                     {weekPickCount}/{weekMatches.length}
                   </span>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-2 pt-2">
-                  {/* Header labels */}
-                  <div className="flex items-center gap-2 pb-0.5">
-                    <div className="hidden sm:block w-20 shrink-0" />
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <span className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Away</span>
-                      <span className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Home</span>
-                    </div>
-                    <div className="w-2 shrink-0" />
-                  </div>
+                <div className="px-3 py-2 space-y-1.5">
                   {weekMatches.map((match) => {
                     const selectedTeam = localPicks[match.id] ?? "";
                     const awaySpread = getTeamSpread(match.pointSpread, "away");
@@ -795,60 +777,144 @@ export default function Picks() {
                     const awayColor = getTeamColor(match.awayTeam);
                     const homeColor = getTeamColor(match.homeTeam);
                     const isLocked = status?.mode === "in-season";
-
                     return (
-                      <div key={match.id} className="flex items-center gap-2 p-2 rounded-xl bg-secondary/20 border">
-                        {/* Game time */}
+                      <div key={match.id} className="flex items-center gap-2 p-1.5 rounded-xl bg-secondary/20 border">
                         {match.gameTime && (
                           <div className="hidden sm:flex w-20 shrink-0 text-[10px] text-muted-foreground font-medium leading-tight text-center flex-col items-center">
-                            {match.gameTime.split(" ").map((part, i) => (
-                              <span key={i}>{part}</span>
-                            ))}
+                            {match.gameTime.split(" ").map((part, i) => <span key={i}>{part}</span>)}
                           </div>
                         )}
-
                         <div className="flex-1 grid grid-cols-2 gap-2">
-                          {/* Away team button */}
                           <button
-                            className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${
-                              awayPicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"
-                            }`}
+                            className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${awayPicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"}`}
                             style={awayPicked ? { borderColor: awayColor, backgroundColor: `${awayColor}22` } : {}}
                             onClick={() => handlePick(match.id, match.awayTeam)}
                             disabled={isLocked}
                           >
                             <TeamLogo team={match.awayTeam} size={24} className="shrink-0" />
                             <span className="truncate font-semibold">{match.awayTeam}</span>
-                            <span className={`ml-auto text-[10px] font-mono shrink-0 ${awayPicked ? "opacity-70" : "text-muted-foreground"}`}>
-                              {awaySpread}
-                            </span>
+                            <span className={`ml-auto text-[10px] font-mono shrink-0 ${awayPicked ? "opacity-70" : "text-muted-foreground"}`}>{awaySpread}</span>
                           </button>
-
-                          {/* Home team button */}
                           <button
-                            className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${
-                              homePicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"
-                            }`}
+                            className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${homePicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"}`}
                             style={homePicked ? { borderColor: homeColor, backgroundColor: `${homeColor}22` } : {}}
                             onClick={() => handlePick(match.id, match.homeTeam)}
                             disabled={isLocked}
                           >
                             <TeamLogo team={match.homeTeam} size={24} className="shrink-0" />
                             <span className="truncate font-semibold">{match.homeTeam}</span>
-                            <span className={`ml-auto text-[10px] font-mono shrink-0 ${homePicked ? "opacity-70" : "text-muted-foreground"}`}>
-                              {homeSpread}
-                            </span>
+                            <span className={`ml-auto text-[10px] font-mono shrink-0 ${homePicked ? "opacity-70" : "text-muted-foreground"}`}>{homeSpread}</span>
                           </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <Accordion
+          type="multiple"
+          value={expandedWeeks}
+          onValueChange={setExpandedWeeks}
+          className="space-y-3"
+        >
+          {Object.entries(filteredMatchesByWeek).map(([week, weekMatches]) => {
+            const weekPickCount = weekMatches.filter((m) => localPicks[m.id]).length;
+            const weekComplete = weekPickCount === weekMatches.length;
+
+            return (
+              <AccordionItem key={week} value={week} className="bg-card border rounded-xl overflow-hidden px-1">
+                <AccordionTrigger className="px-4 hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <span className="font-semibold text-base flex items-center gap-2">
+                      Week {week}
+                      {weekComplete && (
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      )}
+                    </span>
+                    <span className={`text-sm font-normal ${weekComplete ? "text-green-500 font-semibold" : "text-muted-foreground"}`}>
+                      {weekPickCount}/{weekMatches.length}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-2 pt-2">
+                    {/* Header labels */}
+                    <div className="flex items-center gap-2 pb-0.5">
+                      <div className="hidden sm:block w-20 shrink-0" />
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <span className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Away</span>
+                        <span className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Home</span>
+                      </div>
+                      <div className="w-2 shrink-0" />
+                    </div>
+                    {weekMatches.map((match) => {
+                      const selectedTeam = localPicks[match.id] ?? "";
+                      const awaySpread = getTeamSpread(match.pointSpread, "away");
+                      const homeSpread = getTeamSpread(match.pointSpread, "home");
+                      const awayPicked = selectedTeam === match.awayTeam;
+                      const homePicked = selectedTeam === match.homeTeam;
+                      const awayColor = getTeamColor(match.awayTeam);
+                      const homeColor = getTeamColor(match.homeTeam);
+                      const isLocked = status?.mode === "in-season";
+
+                      return (
+                        <div key={match.id} className="flex items-center gap-2 p-2 rounded-xl bg-secondary/20 border">
+                          {/* Game time */}
+                          {match.gameTime && (
+                            <div className="hidden sm:flex w-20 shrink-0 text-[10px] text-muted-foreground font-medium leading-tight text-center flex-col items-center">
+                              {match.gameTime.split(" ").map((part, i) => (
+                                <span key={i}>{part}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex-1 grid grid-cols-2 gap-2">
+                            {/* Away team button */}
+                            <button
+                              className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${
+                                awayPicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"
+                              }`}
+                              style={awayPicked ? { borderColor: awayColor, backgroundColor: `${awayColor}22` } : {}}
+                              onClick={() => handlePick(match.id, match.awayTeam)}
+                              disabled={isLocked}
+                            >
+                              <TeamLogo team={match.awayTeam} size={24} className="shrink-0" />
+                              <span className="truncate font-semibold">{match.awayTeam}</span>
+                              <span className={`ml-auto text-[10px] font-mono shrink-0 ${awayPicked ? "opacity-70" : "text-muted-foreground"}`}>
+                                {awaySpread}
+                              </span>
+                            </button>
+
+                            {/* Home team button */}
+                            <button
+                              className={`h-12 text-sm font-medium flex items-center justify-start px-2.5 gap-2 relative rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full ${
+                                homePicked ? "text-foreground" : "border-border bg-card text-foreground hover:bg-secondary/50 hover:border-muted-foreground/30"
+                              }`}
+                              style={homePicked ? { borderColor: homeColor, backgroundColor: `${homeColor}22` } : {}}
+                              onClick={() => handlePick(match.id, match.homeTeam)}
+                              disabled={isLocked}
+                            >
+                              <TeamLogo team={match.homeTeam} size={24} className="shrink-0" />
+                              <span className="truncate font-semibold">{match.homeTeam}</span>
+                              <span className={`ml-auto text-[10px] font-mono shrink-0 ${homePicked ? "opacity-70" : "text-muted-foreground"}`}>
+                                {homeSpread}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
 
       {/* Floating save button */}
       {status?.mode === "pre-season" && (

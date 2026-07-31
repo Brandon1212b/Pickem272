@@ -293,15 +293,15 @@ export default function Picks() {
 
   // Team records from picks (computed here for both views)
   const teamRecordsSorted = useMemo(() => {
-    if (!matches || !picks) return [];
+    if (!matches) return [];
+    // Pre-populate all 32 teams so they always appear even with no picks yet
     const records: Record<string, { wins: number; losses: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
     for (const match of matches) {
-      const pick = picks.find((p) => p.matchId === match.id);
+      const pick = picks?.find((p) => p.matchId === match.id);
       if (!pick?.selectedTeam) continue;
       const pickedTeam = pick.selectedTeam;
       const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
-      if (!records[pickedTeam]) records[pickedTeam] = { wins: 0, losses: 0 };
-      if (!records[otherTeam]) records[otherTeam] = { wins: 0, losses: 0 };
       records[pickedTeam].wins += 1;
       records[otherTeam].losses += 1;
     }
@@ -550,43 +550,49 @@ export default function Picks() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Your Team Records</CardTitle>
-                <p className="text-xs text-muted-foreground">How you have each team finishing based on your picks</p>
+                <p className="text-xs text-muted-foreground">Tap a team to filter — how you have each team finishing based on your picks</p>
               </CardHeader>
               <CardContent className="space-y-3">
-                {NFL_STRUCTURE.map(({ conf, divisions }) => {
-                  const hasAny = divisions.some((d) => d.teams.some((t) => recordMap[t]));
-                  if (!hasAny) return null;
-                  return (
-                    <div key={conf}>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">{conf}</p>
-                      <div className="space-y-1.5">
-                        {divisions.map(({ div, teams }) => {
-                          const divTeams = teams
-                            .filter((t) => recordMap[t])
-                            .sort((a, b) => (recordMap[b].wins - recordMap[a].wins) || (recordMap[a].losses - recordMap[b].losses));
-                          if (divTeams.length === 0) return null;
-                          return (
-                            <div key={div} className="flex items-center gap-2">
-                              <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
-                              <div className="flex gap-1.5 flex-wrap">
-                                {divTeams.map((team) => {
-                                  const { wins, losses } = recordMap[team];
-                                  return (
-                                    <div key={team} className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg bg-secondary/30 border border-border/50 min-w-[44px]">
-                                      <TeamLogo team={team} size={22} />
-                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">{team}</span>
-                                      <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                {NFL_STRUCTURE.map(({ conf, divisions }) => (
+                  <div key={conf}>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">{conf}</p>
+                    <div className="space-y-1.5">
+                      {divisions.map(({ div, teams }) => {
+                        const divTeams = [...teams].sort((a, b) =>
+                          (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
+                          (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                        );
+                        return (
+                          <div key={div} className="flex items-center gap-2">
+                            <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {divTeams.map((team) => {
+                                const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                                const isSelected = selectedTeamFilter === team;
+                                return (
+                                  <button
+                                    key={team}
+                                    onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
+                                    className={cn(
+                                      "flex flex-col items-center gap-0.5 p-1.5 rounded-lg border min-w-[44px] transition-all",
+                                      isSelected
+                                        ? "bg-primary/15 border-primary ring-1 ring-primary/40"
+                                        : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
+                                    )}
+                                  >
+                                    <TeamLogo team={team} size={22} />
+                                    <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
+                                    <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
+                                  </button>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           );

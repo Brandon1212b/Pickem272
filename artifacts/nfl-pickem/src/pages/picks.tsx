@@ -822,7 +822,7 @@ export default function Picks() {
             return (
               <div className="flex items-center justify-between gap-3 pt-1">
                 <button
-                  onClick={() => prevTeam && setSelectedTeamFilter(prevTeam)}
+                  onClick={() => { if (prevTeam) { setSelectedTeamFilter(prevTeam); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
                   disabled={!prevTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-start"
                 >
@@ -831,7 +831,7 @@ export default function Picks() {
                   <span className="truncate">{prevTeam ?? "—"}</span>
                 </button>
                 <button
-                  onClick={() => nextTeam && setSelectedTeamFilter(nextTeam)}
+                  onClick={() => { if (nextTeam) { setSelectedTeamFilter(nextTeam); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
                   disabled={!nextTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-end"
                 >

@@ -686,42 +686,49 @@ export default function Picks() {
           <Card>
             <CardHeader className="pb-1 pt-3 px-4">
               <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
+              <p className="text-[11px] text-muted-foreground">Tap a team to filter</p>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
-              {NFL_STRUCTURE.map(({ conf, divisions }) => {
-                const hasAny = divisions.some((d) => d.teams.some((t) => recordMap[t]));
-                if (!hasAny) return null;
-                return (
-                  <div key={conf}>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{conf}</p>
-                    <div className="space-y-1">
-                      {divisions.map(({ div, teams }) => {
-                        const divTeams = teams
-                          .filter((t) => recordMap[t])
-                          .sort((a, b) => (recordMap[b].wins - recordMap[a].wins) || (recordMap[a].losses - recordMap[b].losses));
-                        if (divTeams.length === 0) return null;
-                        return (
-                          <div key={div} className="flex items-center gap-1.5">
-                            <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
-                            <div className="flex gap-1 flex-wrap">
-                              {divTeams.map((team) => {
-                                const { wins, losses } = recordMap[team];
-                                return (
-                                  <div key={team} className="flex flex-col items-center gap-0 p-1 rounded-lg bg-secondary/30 border border-border/50 min-w-[40px]">
-                                    <TeamLogo team={team} size={18} />
-                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">{team}</span>
-                                    <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
+              {NFL_STRUCTURE.map(({ conf, divisions }) => (
+                <div key={conf}>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{conf}</p>
+                  <div className="space-y-1">
+                    {divisions.map(({ div, teams }) => {
+                      const divTeams = [...teams].sort((a, b) =>
+                        (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
+                        (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                      );
+                      return (
+                        <div key={div} className="flex items-center gap-1.5">
+                          <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {divTeams.map((team) => {
+                              const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                              const isSelected = selectedTeamFilter === team;
+                              return (
+                                <button
+                                  key={team}
+                                  onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
+                                  className={cn(
+                                    "flex flex-col items-center gap-0 p-1 rounded-lg border min-w-[40px] transition-all",
+                                    isSelected
+                                      ? "bg-primary/15 border-primary ring-1 ring-primary/40"
+                                      : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
+                                  )}
+                                >
+                                  <TeamLogo team={team} size={18} />
+                                  <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
+                                  <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
+                                </button>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </CardContent>
           </Card>
         );

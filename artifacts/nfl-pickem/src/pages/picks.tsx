@@ -823,7 +823,7 @@ export default function Picks() {
             return (
               <div className="flex items-center justify-between gap-3 pt-1">
                 <button
-                  onClick={() => { if (prevTeam) { setSelectedTeamFilter(prevTeam); weekListTopRef.current?.scrollIntoView({ behavior: "smooth" }); } }}
+                  onClick={() => { if (prevTeam) { setSelectedTeamFilter(prevTeam); setTimeout(() => { const el = weekListTopRef.current; if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: "smooth" }); }, 0); } }}
                   disabled={!prevTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-start"
                 >
@@ -832,7 +832,7 @@ export default function Picks() {
                   <span className="truncate">{prevTeam ?? "—"}</span>
                 </button>
                 <button
-                  onClick={() => { if (nextTeam) { setSelectedTeamFilter(nextTeam); weekListTopRef.current?.scrollIntoView({ behavior: "smooth" }); } }}
+                  onClick={() => { if (nextTeam) { setSelectedTeamFilter(nextTeam); setTimeout(() => { const el = weekListTopRef.current; if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: "smooth" }); }, 0); } }}
                   disabled={!nextTeam}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-end"
                 >

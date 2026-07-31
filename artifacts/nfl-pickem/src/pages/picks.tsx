@@ -813,6 +813,35 @@ export default function Picks() {
               </div>
             );
           })}
+
+          {/* Prev / Next team navigation */}
+          {(() => {
+            const idx = ALL_TEAMS.indexOf(selectedTeamFilter);
+            const prevTeam = idx > 0 ? ALL_TEAMS[idx - 1] : null;
+            const nextTeam = idx < ALL_TEAMS.length - 1 ? ALL_TEAMS[idx + 1] : null;
+            return (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  onClick={() => prevTeam && setSelectedTeamFilter(prevTeam)}
+                  disabled={!prevTeam}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-start"
+                >
+                  <span className="text-muted-foreground">←</span>
+                  {prevTeam && <TeamLogo team={prevTeam} size={20} />}
+                  <span className="truncate">{prevTeam ?? "—"}</span>
+                </button>
+                <button
+                  onClick={() => nextTeam && setSelectedTeamFilter(nextTeam)}
+                  disabled={!nextTeam}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm font-medium transition-colors hover:bg-secondary/60 disabled:opacity-30 disabled:cursor-not-allowed flex-1 justify-end"
+                >
+                  <span className="truncate">{nextTeam ?? "—"}</span>
+                  {nextTeam && <TeamLogo team={nextTeam} size={20} />}
+                  <span className="text-muted-foreground">→</span>
+                </button>
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <Accordion

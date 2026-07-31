@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pickem
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pickem}
+      POSTGRES_DB: pickem
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pickem"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: sh -c "pnpm --filter @workspace/db run push"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pickem:${POSTGRES_PASSWORD:-pickem}@db:5432/pickem
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgresql://pickem:${POSTGRES_PASSWORD:-pickem}@db:5432/pickem
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:

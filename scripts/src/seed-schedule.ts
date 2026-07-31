@@ -221,7 +221,7 @@ const schedule: MatchSeed[] = [
   { week: 10, awayTeam: "SF",  homeTeam: "DAL", gameTime: "Sun 4:25pm" },
   { week: 10, awayTeam: "PIT", homeTeam: "CIN", gameTime: "Sun 8:20pm" },
   // Mon Nov 16
-  { week: 10, awayTeam: "BAL", homeTeam: "LAC", gameTime: "Mon 8:15pm" },
+  { week: 10, awayTeam: "LAC", homeTeam: "BAL", gameTime: "Mon 8:15pm" },
 
   // ── WEEK 11 ── BYE: ATL, CLE, GB, LAR, NE, SEA ────────────────────────────
   // Thu Nov 19

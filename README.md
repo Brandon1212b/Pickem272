@@ -13,6 +13,7 @@ An interactive web application where football fans predict the winner of every N
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Development](#development)
+- [Deployment](#deployment)
 - [How to Play](#how-to-play)
 - [Contributing](#contributing)
 
@@ -138,6 +139,7 @@ Pickem272/
 │   │   └── seed-schedule.ts     # Data seeding script
 │   └── package.json
 ├── package.json                 # Workspace root
+├── vercel.json                  # Vercel frontend config
 └── README.md
 ```
 
@@ -148,7 +150,7 @@ Pickem272/
 ### Prerequisites
 - **Node.js** 18+ (or use the provided Replit environment)
 - **pnpm** package manager
-- **PostgreSQL** database (create via Replit databases or locally)
+- **PostgreSQL** database (create via Replit databases, Neon, Supabase, or locally)
 
 ### Installation
 
@@ -165,23 +167,27 @@ Pickem272/
 
 3. **Set up environment variables**
    
-   Create a `.env` file in the root directory:
+   Copy the example and fill in values:
+   ```bash
+   cp .env.example .env
+   ```
+
+   Minimum required:
    ```env
    DATABASE_URL=postgresql://user:password@localhost:5432/pickem272
-   PORT=3000
+   PORT=8080
    NODE_ENV=development
    ```
 
 4. **Set up the database**
    ```bash
-   # Run migrations (if applicable)
-   cd lib/db
-   pnpm run migrate
+   # Push schema (Drizzle)
+   pnpm --filter @workspace/db run push
    ```
 
 5. **Seed initial data** (optional)
    ```bash
-   pnpm run seed-schedule
+   pnpm --filter @workspace/scripts run seed-schedule
    ```
 
 ### Development
@@ -192,8 +198,8 @@ pnpm run dev
 ```
 
 This will run:
-- Backend API server on `http://localhost:3000`
-- Frontend development server (configured in Vite)
+- Backend API server on `http://localhost:8080` (or your PORT)
+- Frontend development server (Vite, proxies `/api` → backend)
 
 **Type checking across workspaces:**
 ```bash
@@ -204,6 +210,42 @@ pnpm run typecheck
 ```bash
 pnpm run build
 ```
+
+---
+
+## 🚀 Deployment
+
+### Recommended: Frontend on Vercel + API elsewhere
+
+The production design serves both static assets and the API from a single Node process (see Dockerfile). Vercel is excellent for the React frontend; the Express + Postgres API is best run as a long-lived Node process.
+
+#### 1. Frontend on Vercel
+
+1. Import the repo in the [Vercel dashboard](https://vercel.com/new).
+2. Vercel will pick up `vercel.json`:
+   - Build: `pnpm --filter @workspace/nfl-pickem run build`
+   - Output: `artifacts/nfl-pickem/dist/public`
+3. Set environment variables in the Vercel project:
+   - `VITE_API_BASE_URL` = the public URL of your API (e.g. `https://your-api.up.railway.app`)
+4. Deploy. The SPA rewrite is already configured.
+
+#### 2. API + Database
+
+Options that work well:
+
+- **Railway / Render / Fly.io / DigitalOcean App Platform** – deploy the Docker image or the built `artifacts/api-server`.
+- **Docker Compose** (self-hosted or any VPS):
+  ```bash
+  # set POSTGRES_PASSWORD in .env then
+  docker compose up -d
+  ```
+- Point `DATABASE_URL` at a managed Postgres (Neon, Supabase, Railway Postgres, etc.).
+
+When the API is on a different origin, the frontend uses `VITE_API_BASE_URL` (see `main.tsx`). CORS is already enabled on the Express app.
+
+#### Same-origin / single container
+
+Use the provided `Dockerfile` + `docker-compose.yml` for a single process that serves both the built frontend and `/api`. This is the original production path and still works great on any Docker host.
 
 ---
 
@@ -311,7 +353,7 @@ This project is licensed under the MIT License — see the LICENSE file for deta
 - **Languages:** TypeScript, React, Node.js
 - **Database:** PostgreSQL
 - **Framework:** React + Express
-- **Deployment:** Replit
+- **Deployment:** Vercel (frontend) + Docker / Railway / etc. (API)
 - **Total Games:** 272 (18 weeks × 16 games)
 - **Total Teams:** 32 NFL teams
 

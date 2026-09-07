@@ -41,9 +41,9 @@ import { getTeamColor } from "@/lib/team-colors";
 type AutofillMode = "home" | "away" | "favorites" | "random";
 
 const AUTOFILL_OPTIONS: { mode: AutofillMode; label: string; icon: React.ElementType; description: string }[] = [
-  { mode: "home", label: "Home Teams", icon: Wand2, description: "Pick the home team for every unpicked game." },
-  { mode: "away", label: "Away Teams", icon: Plane, description: "Pick the away team for every unpicked game." },
-  { mode: "favorites", label: "Favorites", icon: Star, description: "Pick the Vegas spread favorite for every unpicked game." },
+  { mode: "home", label: "Home", icon: Wand2, description: "Pick the home team for every unpicked game." },
+  { mode: "away", label: "Away", icon: Plane, description: "Pick the away team for every unpicked game." },
+  { mode: "favorites", label: "Favs", icon: Star, description: "Pick the Vegas spread favorite for every unpicked game." },
   { mode: "random", label: "Random", icon: Shuffle, description: "Randomly pick a winner for every unpicked game." },
 ];
 
@@ -182,7 +182,11 @@ export default function Picks() {
         skipHasUnsavedChangesReset.current = true;
         setLocalPicks((prev) => {
           const merged = { ...prev };
-          for (const p of newPicks) merged[p.matchId] = p.selectedTeam;
+           // Keep manual picks made in this editing session; autofill only
+           // supplies matches that were still empty locally.
+           for (const p of newPicks) {
+             if (!(p.matchId in merged)) merged[p.matchId] = p.selectedTeam;
+           }
           return merged;
         });
         setHasUnsavedChanges(true);
@@ -740,17 +744,18 @@ export default function Picks() {
       {status?.mode === "pre-season" && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Quick Pick Autofill</p>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 flex-nowrap">
             {AUTOFILL_OPTIONS.map(({ mode, label, icon: Icon }) => (
               <Button
                 key={mode}
                 variant="outline"
                 size="sm"
+                className="flex-1 min-w-0 px-2 gap-1"
                 onClick={() => setPendingAutofill(mode)}
                 disabled={autofillPicks.isPending || unpickedCount === 0}
               >
-                <Icon className="w-4 h-4 mr-2" />
-                {label}
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{label}</span>
               </Button>
             ))}
           </div>

@@ -1,21 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/nfl-pickem run build",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/nfl-pickem run build",
   "outputDirectory": "artifacts/nfl-pickem/dist/public",
   "installCommand": "corepack enable && pnpm install --frozen-lockfile",
   "framework": null,
   "rewrites": [
-    {
-      "source": "/api",
-      "destination": "/api"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api", "destination": "/api" },
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

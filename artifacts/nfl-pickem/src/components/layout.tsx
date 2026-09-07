@@ -5,8 +5,10 @@ import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield, Newspaper } 
 import {
   useGetLeaderboard,
   useGetSeasonStatus,
+  useGetUserPicks,
   useGetUserPicksForWeek,
   useUpdateUser,
+  getGetUserPicksQueryKey,
   getGetUserPicksForWeekQueryKey,
   getGetSeasonStatusQueryKey,
 } from "@workspace/api-client-react";
@@ -37,7 +39,7 @@ function UserAvatar({ name, color, size = "sm" }: { name: string; color?: string
   );
 }
 
-function NavStats({ userId }: { userId: number }) {
+function NavStats({ userId, disabled }: { userId: number; disabled: boolean }) {
   const [, setLocation] = useLocation();
   const { data: leaderboard } = useGetLeaderboard();
   const { data: status } = useGetSeasonStatus();
@@ -59,9 +61,12 @@ function NavStats({ userId }: { userId: number }) {
     <div className="flex items-center gap-1.5">
       {rank !== null && (
         <button
-          onClick={() => setLocation("/leaderboard")}
-          className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
-          title="View standings"
+          onClick={() => !disabled && setLocation("/leaderboard")}
+          disabled={disabled}
+          className={`flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors ${
+            disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-primary/20"
+          }`}
+          title={disabled ? "Complete all 272 picks to unlock standings" : "View standings"}
         >
           #{rank}
         </button>
@@ -161,6 +166,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { data: status } = useGetSeasonStatus({ query: { enabled: !!user, queryKey: getGetSeasonStatusQueryKey() } });
+  const { data: userPicks } = useGetUserPicks(user?.id || 0, {
+    query: {
+      enabled: !!user?.id,
+      queryKey: getGetUserPicksQueryKey(user?.id || 0),
+    },
+  });
 
   if (!user && location !== "/") {
     setLocation("/");
@@ -169,13 +180,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
   const isInSeason = status?.mode === "in-season";
+  const picksComplete = (userPicks?.length ?? 0) >= 272;
 
   const navItems = [
     isInSeason
       ? { href: "/recap", label: "Recap", icon: Newspaper }
       : { href: "/picks", label: "My Picks", icon: Grid },
-    { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard },
-    { href: "/leaderboard", label: "Standings", icon: Trophy },
+    { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard, disabled: !picksComplete },
+    { href: "/leaderboard", label: "Standings", icon: Trophy, disabled: !picksComplete },
   ];
 
   return (
@@ -191,7 +203,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">
-              {navItems.map((item) => (
+              {navItems.map((item) => item.disabled ? (
+                <button
+                  key={item.href}
+                  type="button"
+                  disabled
+                  title="Complete all 272 picks to unlock"
+                  className="text-sm font-medium text-muted-foreground/40 cursor-not-allowed"
+                >
+                  {item.label}
+                </button>
+              ) : (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -205,7 +227,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-2">
-              <NavStats userId={user.id} />
+              <NavStats userId={user.id} disabled={!picksComplete} />
               <ProfileButton />
             </div>
           </div>
@@ -219,10 +241,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {user && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl border-t border-border pb-safe">
           <div className="flex items-center justify-around h-16 px-4">
-            {navItems.map((item) => {
+              {navItems.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
-              return (
+                if (item.disabled) {
+                  return (
+                    <button
+                      key={item.href}
+                      type="button"
+                      disabled
+                      title="Complete all 272 picks to unlock"
+                      className="flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground/40 cursor-not-allowed"
+                    >
+                      <Icon className="w-6 h-6" />
+                      <span className="text-[10px] font-medium">{item.label}</span>
+                    </button>
+                  );
+                }
+                return (
                 <Link
                   key={item.href}
                   href={item.href}

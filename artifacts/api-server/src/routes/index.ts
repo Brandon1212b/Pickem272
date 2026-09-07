@@ -6,6 +6,7 @@ import picksRouter from "./picks";
 import leaderboardRouter from "./leaderboard";
 import smackboardRouter from "./smackboard";
 import adminRouter from "./admin";
+import spreadsRouter from "./spreads";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(picksRouter);
 router.use(leaderboardRouter);
 router.use(smackboardRouter);
 router.use(adminRouter);
+router.use(spreadsRouter);
 
 export default router;

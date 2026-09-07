@@ -125,6 +125,7 @@ export default function Admin() {
   const [resettingWeek, setResettingWeek] = useState(false);
   const [deletingUser, setDeletingUser] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [syncingSpreads, setSyncingSpreads] = useState(false);
 
   // Storyline editor state
   const [storylineWeek, setStorylineWeek] = useState<number>(1);
@@ -176,6 +177,34 @@ export default function Admin() {
       toast.error("Failed to seed match data");
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleSyncSpreads = async () => {
+    setSyncingSpreads(true);
+    try {
+      const res = await fetch("/api/admin/sync-spreads", { method: "POST" });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as {
+        updated: number;
+        noOdds: string[];
+        unmatched: string[];
+        errors: string[];
+      };
+      queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
+      if (data.errors.length > 0) {
+        toast.error(`Spread refresh completed with ${data.errors.length} week error${data.errors.length === 1 ? "" : "s"}`);
+      } else if (data.updated > 0) {
+        toast.success(`Updated ${data.updated} live spread${data.updated === 1 ? "" : "s"}`);
+      } else if (data.noOdds.length > 0) {
+        toast.info(`No spread changes. ${data.noOdds.length} game${data.noOdds.length === 1 ? "" : "s"} do not have odds yet.`);
+      } else {
+        toast.success("Spreads are already up to date");
+      }
+    } catch {
+      toast.error("Failed to refresh spreads from ESPN");
+    } finally {
+      setSyncingSpreads(false);
     }
   };
 
@@ -340,6 +369,15 @@ export default function Admin() {
             </div>
             <Button size="sm" variant="outline" onClick={handleSeedMatches} disabled={seeding}>
               {seeding ? "Seeding…" : "Seed Matches"}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-4 border rounded-xl bg-secondary/30">
+            <div>
+              <Label className="text-base font-semibold">Refresh Live Spreads</Label>
+              <p className="text-sm text-muted-foreground">Pull the latest sportsbook lines from ESPN for all weeks</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleSyncSpreads} disabled={syncingSpreads}>
+              {syncingSpreads ? "Refreshing…" : "Refresh Spreads"}
             </Button>
           </div>
         </CardContent>

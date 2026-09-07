@@ -33,10 +33,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-// In production we bundle the built frontend (artifacts/nfl-pickem/dist/public)
-// into this package's dist/public directory (see Dockerfile) and serve it
-// directly, so a single container/process handles both API and static assets.
-if (process.env.NODE_ENV === "production") {
+// Docker / long-running Node serves the built SPA from this process.
+// On Vercel the static files come from outputDirectory; skip that here.
+const serveStaticFrontend =
+  process.env.NODE_ENV === "production" && !process.env.VERCEL;
+
+if (serveStaticFrontend) {
   const publicDir = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     "public",

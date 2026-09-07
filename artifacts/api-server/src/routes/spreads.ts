@@ -37,12 +37,7 @@ async function fetchWeekOdds(week: number) {
   return espnRes.json() as Promise<any>;
 }
 
-/**
- * POST /admin/sync-spreads
- * Query: week=1..18 (optional). Omit to sync all 18 weeks.
- */
-router.post("/admin/sync-spreads", async (req, res) => {
-  const weekParam = req.query.week ? parseInt(String(req.query.week), 10) : null;
+async function syncSpreads(weekParam: number | null) {
   const weeks =
     weekParam && weekParam >= 1 && weekParam <= 18
       ? [weekParam]
@@ -103,14 +98,38 @@ router.post("/admin/sync-spreads", async (req, res) => {
     }
   }
 
-  res.json({
+  return {
     weeks,
     updated: updated.length,
     details: updated,
     unmatched,
     noOdds,
     errors,
-  });
+  };
+}
+
+function weekFromQuery(req: { query: Record<string, unknown> }): number | null {
+  const raw = req.query.week;
+  if (!raw) return null;
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** GET works from Safari on a phone. POST kept for admin tools. */
+router.get("/admin/sync-spreads", async (req, res) => {
+  try {
+    res.json(await syncSpreads(weekFromQuery(req)));
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.post("/admin/sync-spreads", async (req, res) => {
+  try {
+    res.json(await syncSpreads(weekFromQuery(req)));
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
 });
 
 export default router;

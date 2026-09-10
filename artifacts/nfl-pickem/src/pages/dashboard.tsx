@@ -316,10 +316,15 @@ export default function Dashboard() {
                       <span className="text-sm font-bold text-foreground">
                         {liveGame.awayScore}–{liveGame.homeScore}
                       </span>
+                      {matchWinner && isCompleted && (
+                        <span>
+                          Final: <span className="text-foreground font-bold">{matchWinner} wins</span>
+                        </span>
+                      )}
                     </div>
                   )}
 
-                  {matchWinner && isCompleted && (
+                  {matchWinner && isCompleted && !hasLiveScore && (
                     <div className="text-xs text-muted-foreground font-medium">
                       Final: <span className="text-foreground font-bold">{matchWinner}</span> wins
                     </div>

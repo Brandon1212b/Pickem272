@@ -3,11 +3,17 @@ import {
   useGetLeaderboard,
   useGetLeaderboardTrends,
   useGetWeeklyExtremes,
+  useGetUserPicks,
+  useListMatches,
+  getGetUserPicksQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ALL_NFL_TEAMS, TeamRecordsCard } from "@/components/team-records-card";
+import type { TeamRecord } from "@/components/team-records-card";
 
 const FALLBACK_COLORS = [
   "#007AFF", "#FF6B35", "#34C759", "#AF52DE",
@@ -63,7 +69,10 @@ function BadgePop({
       <button
         ref={ref}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((o) => !o);
+        }}
         className="cursor-pointer hover:opacity-70 transition-opacity text-base leading-none focus:outline-none"
         aria-label={def?.name ?? emoji}
       >
@@ -88,9 +97,17 @@ export default function Leaderboard() {
   const { data: leaderboard, isLoading: loadingBoard } = useGetLeaderboard();
   const { data: trends, isLoading: loadingTrends } = useGetLeaderboardTrends();
   const { data: extremes, isLoading: loadingExtremes } = useGetWeeklyExtremes();
+  const { data: matches, isLoading: loadingMatches } = useListMatches();
 
   // null = follow active week; number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const { data: selectedUserPicks, isLoading: loadingSelectedUserPicks } = useGetUserPicks(selectedUserId ?? 0, {
+    query: {
+      enabled: selectedUserId !== null,
+      queryKey: getGetUserPicksQueryKey(selectedUserId ?? 0),
+    },
+  });
 
   if (loadingBoard || loadingTrends || loadingExtremes) {
     return (
@@ -154,6 +171,21 @@ export default function Leaderboard() {
     return entry?.avatar ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
   };
 
+  const selectedUser = leaderboard?.find((entry) => entry.userId === selectedUserId);
+  const selectedUserRecords: TeamRecord[] = (() => {
+    const records: Record<string, TeamRecord> = {};
+    for (const team of ALL_NFL_TEAMS) records[team] = { team, wins: 0, losses: 0 };
+    const picksByMatch = new Map((selectedUserPicks ?? []).map((pick) => [pick.matchId, pick.selectedTeam]));
+    for (const match of matches ?? []) {
+      const pickedTeam = picksByMatch.get(match.id);
+      if (!pickedTeam) continue;
+      const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
+      records[pickedTeam].wins += 1;
+      records[otherTeam].losses += 1;
+    }
+    return Object.values(records);
+  })();
+
   return (
     <div className="space-y-6">
       <div>
@@ -182,6 +214,7 @@ export default function Leaderboard() {
       <Card>
         <CardHeader>
           <CardTitle>League Standings</CardTitle>
+          <p className="text-xs text-muted-foreground">Click a player to view their full-season team records.</p>
         </CardHeader>
         <CardContent>
           <Table>
@@ -208,7 +241,19 @@ export default function Leaderboard() {
             </TableHeader>
             <TableBody>
               {leaderboard?.map((entry) => (
-                <TableRow key={entry.userId}>
+                <TableRow
+                  key={entry.userId}
+                  tabIndex={0}
+                  className="cursor-pointer hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => setSelectedUserId(entry.userId)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedUserId(entry.userId);
+                    }
+                  }}
+                  aria-label={`View ${entry.name}'s team records`}
+                >
                   <TableCell className="font-bold text-lg">
                     <span className="flex items-center gap-1">
                       {entry.rank}
@@ -259,6 +304,26 @@ export default function Leaderboard() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={selectedUserId !== null} onOpenChange={(open) => !open && setSelectedUserId(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedUser?.name ?? "Player"}’s Team Records</DialogTitle>
+            <DialogDescription>
+              How this player has each team finishing based on their season picks.
+            </DialogDescription>
+          </DialogHeader>
+          {loadingMatches || loadingSelectedUserPicks ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <TeamRecordsCard
+              records={selectedUserRecords}
+              title="Full Season Picks"
+              description="Wins are the teams they selected; losses are the opponents in those games."
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Weekly extremes */}
       {(extremes?.topUsers?.length || 0) + (extremes?.bottomUsers?.length || 0) > 0 && (

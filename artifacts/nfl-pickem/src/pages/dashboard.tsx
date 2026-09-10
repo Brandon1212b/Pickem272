@@ -290,6 +290,9 @@ export default function Dashboard() {
                     <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${userPickedAway ? "font-bold text-primary" : ""}`}>
                       <TeamLogo team={pop.awayTeam} size={20} />
                       <span className="text-sm truncate">{pop.awayTeam}</span>
+                      {hasLiveScore && liveGame && (
+                        <span className="text-sm font-bold text-foreground">{liveGame.awayScore}</span>
+                      )}
                       {userPickedAway && (
                         <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ my pick</span>
                       )}
@@ -299,36 +302,13 @@ export default function Dashboard() {
                       {userPickedHome && (
                         <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ my pick</span>
                       )}
+                      {hasLiveScore && liveGame && (
+                        <span className="text-sm font-bold text-foreground">{liveGame.homeScore}</span>
+                      )}
                       <span className="text-sm truncate text-right">{pop.homeTeam}</span>
                       <TeamLogo team={pop.homeTeam} size={20} />
                     </div>
                   </div>
-
-                  {hasLiveScore && liveGame && (
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground font-medium">
-                      <span>
-                        {liveGame.completed
-                          ? "Final"
-                          : liveGame.period > 0
-                          ? `Q${liveGame.period} ${liveGame.clock}`
-                          : liveGame.status.replace(/^STATUS_/, "").replaceAll("_", " ")}
-                      </span>
-                      <span className="text-sm font-bold text-foreground">
-                        {liveGame.awayScore}–{liveGame.homeScore}
-                      </span>
-                      {matchWinner && isCompleted && (
-                        <span>
-                          Final: <span className="text-foreground font-bold">{matchWinner} wins</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {matchWinner && isCompleted && !hasLiveScore && (
-                    <div className="text-xs text-muted-foreground font-medium">
-                      Final: <span className="text-foreground font-bold">{matchWinner}</span> wins
-                    </div>
-                  )}
 
                   <div className="flex items-center justify-between">
                     <PickerAvatars names={pop.awayPickerNames} colorMap={userColorMap} />

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, picksTable, matchesTable, seasonConfigTable, storylinesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getLastCompletedWeek } from "../lib/season";
 
 const router = Router();
 
@@ -115,15 +116,14 @@ router.get("/leaderboard/weekly-extremes", async (_req, res) => {
   const picks = await db.select().from(picksTable);
   const matches = await db.select().from(matchesTable);
   const users = await db.select().from(usersTable);
-  const completedMatches = matches.filter((m) => m.isCompleted);
+  const lastWeek = getLastCompletedWeek(matches);
 
-  if (completedMatches.length === 0) {
+  if (lastWeek === 0) {
     res.json({ week: 0, topUsers: [], bottomUsers: [] });
     return;
   }
 
-  const lastWeek = Math.max(...completedMatches.map((m) => m.week));
-  const lastWeekMatchIds = new Set(completedMatches.filter((m) => m.week === lastWeek).map((m) => m.id));
+  const lastWeekMatchIds = new Set(matches.filter((m) => m.week === lastWeek).map((m) => m.id));
 
   const scores = users.map((u) => {
     const weekPicks = picks.filter((p) => p.userId === u.id && lastWeekMatchIds.has(p.matchId));
@@ -149,9 +149,7 @@ router.get("/leaderboard/pick-popularity", async (req, res) => {
   const picks = await db.select().from(picksTable);
   const matches = await db.select().from(matchesTable);
   const users = await db.select().from(usersTable);
-  const [cfg] = await db.select().from(seasonConfigTable).limit(1);
-
-  const lastCompleted = cfg?.lastCompletedWeek ?? 0;
+  const lastCompleted = getLastCompletedWeek(matches);
 
   // Optional week query param — defaults to active week
   const weekParam = req.query.week ? parseInt(req.query.week as string, 10) : null;
@@ -196,8 +194,7 @@ router.get("/leaderboard/weekly-recap", async (req, res) => {
   const picks = await db.select().from(picksTable);
   const matches = await db.select().from(matchesTable);
   const users = await db.select().from(usersTable);
-  const [cfg] = await db.select().from(seasonConfigTable).limit(1);
-  const lastCompleted = cfg?.lastCompletedWeek ?? 0;
+  const lastCompleted = getLastCompletedWeek(matches);
 
   const weekParam = req.query.week ? parseInt(req.query.week as string, 10) : null;
   const activeWeek = (weekParam && !isNaN(weekParam) && weekParam >= 1 && weekParam <= 18)
@@ -508,13 +505,25 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
 
 router.get("/leaderboard/season-status", async (_req, res) => {
   const [cfg] = await db.select().from(seasonConfigTable).limit(1);
+  const matches = await db.select().from(matchesTable);
+  const lastCompletedWeek = getLastCompletedWeek(matches);
   if (!cfg) {
     res.json({ mode: "pre-season", lastCompletedWeek: 0, seasonLocked: false });
     return;
   }
+
+  // Repair older/stale config values created when a single result incorrectly
+  // advanced the week.
+  if (cfg.lastCompletedWeek !== lastCompletedWeek) {
+    await db
+      .update(seasonConfigTable)
+      .set({ lastCompletedWeek })
+      .where(eq(seasonConfigTable.id, cfg.id));
+  }
+
   res.json({
     mode: cfg.mode,
-    lastCompletedWeek: cfg.lastCompletedWeek,
+    lastCompletedWeek,
     seasonLocked: cfg.mode === "in-season",
   });
 });

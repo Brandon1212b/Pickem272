@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, matchesTable, picksTable, seasonConfigTable, usersTable, storylinesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { SetMatchResultParams, SetMatchResultBody, UpdateSeasonModeBody } from "@workspace/api-zod";
+import { getLastCompletedWeek } from "../lib/season";
 
 const router = Router();
 
@@ -30,8 +31,7 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
   }
 
   const allMatches = await db.select().from(matchesTable);
-  const completedWeeks = [...new Set(allMatches.filter((m) => m.isCompleted).map((m) => m.week))];
-  const lastCompletedWeek = completedWeeks.length > 0 ? Math.max(...completedWeeks) : 0;
+  const lastCompletedWeek = getLastCompletedWeek(allMatches);
   const [cfg] = await db.select().from(seasonConfigTable).limit(1);
   if (cfg) {
     await db.update(seasonConfigTable).set({ lastCompletedWeek }).where(eq(seasonConfigTable.id, cfg.id));
@@ -67,8 +67,7 @@ router.delete("/admin/weeks/:week/results", async (req, res) => {
   }
 
   const allMatches = await db.select().from(matchesTable);
-  const completedWeeks = [...new Set(allMatches.filter((m) => m.isCompleted).map((m) => m.week))];
-  const lastCompletedWeek = completedWeeks.length > 0 ? Math.max(...completedWeeks) : 0;
+  const lastCompletedWeek = getLastCompletedWeek(allMatches);
   const [cfg] = await db.select().from(seasonConfigTable).limit(1);
   if (cfg) {
     await db.update(seasonConfigTable).set({ lastCompletedWeek }).where(eq(seasonConfigTable.id, cfg.id));

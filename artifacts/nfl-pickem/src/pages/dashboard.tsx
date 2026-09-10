@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TeamLogo } from "@/lib/team-logos";
-import { getTeamColor } from "@/lib/team-colors";
+import { getTeamSplitColors } from "@/lib/team-colors";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -263,6 +263,7 @@ export default function Dashboard() {
                 : userWrong
                 ? "bg-destructive/20 text-destructive"
                 : "bg-primary/20 text-primary";
+              const splitColors = getTeamSplitColors(pop.awayTeam, pop.homeTeam);
 
               return (
                 <div
@@ -325,13 +326,13 @@ export default function Dashboard() {
                       {pop.awayPickCount > 0 && (
                         <div
                           className="h-full rounded-l-full"
-                          style={{ width: `${pop.awayPickPct}%`, backgroundColor: getTeamColor(pop.awayTeam) }}
+                          style={{ width: `${pop.awayPickPct}%`, backgroundColor: splitColors.away }}
                         />
                       )}
                       {pop.homePickCount > 0 && (
                         <div
                           className="h-full rounded-r-full"
-                          style={{ width: `${pop.homePickPct}%`, backgroundColor: getTeamColor(pop.homeTeam) }}
+                          style={{ width: `${pop.homePickPct}%`, backgroundColor: splitColors.home }}
                         />
                       )}
                     </div>

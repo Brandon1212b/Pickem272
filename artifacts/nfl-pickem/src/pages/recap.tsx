@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TeamLogo } from "@/lib/team-logos";
-import { getTeamColor } from "@/lib/team-colors";
+import { getTeamColor, getTeamSplitColors } from "@/lib/team-colors";
 import { formatDistanceToNow } from "date-fns";
 import { Send, TrendingUp, TrendingDown, Zap, AlertCircle, Minus, Newspaper, MessageSquare, Trophy, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -427,6 +427,7 @@ function WeeklyRecapContent({
           <CardContent className="space-y-3">
             {recap.biggestSplits.map((game) => {
               const total = game.awayPickCount + game.homePickCount;
+              const splitColors = getTeamSplitColors(game.awayTeam, game.homeTeam);
               return (
                 <div key={game.matchId} className={cn(
                   "rounded-xl border p-3 space-y-2",
@@ -463,13 +464,13 @@ function WeeklyRecapContent({
                         {game.awayPickCount > 0 && (
                           <div
                             className="h-full rounded-l-full transition-all"
-                            style={{ width: `${game.awayPickPct}%`, backgroundColor: getTeamColor(game.awayTeam) }}
+                            style={{ width: `${game.awayPickPct}%`, backgroundColor: splitColors.away }}
                           />
                         )}
                         {game.homePickCount > 0 && (
                           <div
                             className="h-full rounded-r-full transition-all"
-                            style={{ width: `${game.homePickPct}%`, backgroundColor: getTeamColor(game.homeTeam) }}
+                            style={{ width: `${game.homePickPct}%`, backgroundColor: splitColors.home }}
                           />
                         )}
                       </div>

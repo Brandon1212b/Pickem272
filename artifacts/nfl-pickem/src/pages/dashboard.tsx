@@ -91,6 +91,37 @@ interface PopularityItem {
   winner?: string | null;
 }
 
+interface LiveScoreGame {
+  awayTeam: string;
+  homeTeam: string;
+  awayScore: number;
+  homeScore: number;
+  status: string;
+  completed: boolean;
+  clock: string;
+  period: number;
+}
+
+interface LiveScoreResponse {
+  week: number | null;
+  games: LiveScoreGame[];
+}
+
+function normalizeScoreboardTeam(team: string): string {
+  const map: Record<string, string> = {
+    JAC: "JAX",
+    WSH: "WAS",
+    LVR: "LV",
+    SFO: "SF",
+    GNB: "GB",
+    NWE: "NE",
+    KAN: "KC",
+    NOR: "NO",
+    TAM: "TB",
+  };
+  return map[team] ?? team;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -103,6 +134,17 @@ export default function Dashboard() {
     query: { enabled: !!user?.id, queryKey: getGetUserPicksQueryKey(user?.id || 0) },
   });
   const { data: leaderboard } = useGetLeaderboard();
+  const { data: liveScores } = useQuery<LiveScoreResponse>({
+    queryKey: ["live-scores"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/live-scores");
+      if (!res.ok) throw new Error("Failed to fetch live scores");
+      return res.json() as Promise<LiveScoreResponse>;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    retry: 1,
+  });
 
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
@@ -205,6 +247,17 @@ export default function Dashboard() {
               const matchWinner = match?.winner ?? null;
               const userCorrect = isCompleted && !!matchWinner && !!userPickedTeam && userPickedTeam === matchWinner;
               const userWrong = isCompleted && !!matchWinner && !!userPickedTeam && userPickedTeam !== matchWinner;
+              const liveGame = liveScores?.week === pop.week
+                ? liveScores.games.find((game) =>
+                    normalizeScoreboardTeam(game.awayTeam) === pop.awayTeam &&
+                    normalizeScoreboardTeam(game.homeTeam) === pop.homeTeam
+                  )
+                : undefined;
+              const hasLiveScore = !!liveGame && (
+                liveGame.completed ||
+                liveGame.period > 0 ||
+                liveGame.status !== "STATUS_SCHEDULED"
+              );
 
               return (
                 <div
@@ -250,6 +303,21 @@ export default function Dashboard() {
                       <TeamLogo team={pop.homeTeam} size={20} />
                     </div>
                   </div>
+
+                  {hasLiveScore && liveGame && (
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground font-medium">
+                      <span>
+                        {liveGame.completed
+                          ? "Final"
+                          : liveGame.period > 0
+                          ? `Q${liveGame.period} ${liveGame.clock}`
+                          : liveGame.status.replace(/^STATUS_/, "").replaceAll("_", " ")}
+                      </span>
+                      <span className="text-sm font-bold text-foreground">
+                        {liveGame.awayScore}–{liveGame.homeScore}
+                      </span>
+                    </div>
+                  )}
 
                   {matchWinner && isCompleted && (
                     <div className="text-xs text-muted-foreground font-medium">

@@ -258,6 +258,11 @@ export default function Dashboard() {
                 liveGame.period > 0 ||
                 liveGame.status !== "STATUS_SCHEDULED"
               );
+              const myPickBadgeClass = userCorrect
+                ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                : userWrong
+                ? "bg-destructive/20 text-destructive"
+                : "bg-primary/20 text-primary";
 
               return (
                 <div
@@ -294,13 +299,13 @@ export default function Dashboard() {
                         <span className="text-sm font-bold text-foreground">{liveGame.awayScore}</span>
                       )}
                       {userPickedAway && (
-                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ my pick</span>
+                        <span className={`text-[10px] ${myPickBadgeClass} px-1.5 py-0.5 rounded-full font-semibold shrink-0`}>✓ my pick</span>
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">@</span>
                     <div className={`flex items-center gap-1.5 flex-1 min-w-0 justify-end ${userPickedHome ? "font-bold text-primary" : ""}`}>
                       {userPickedHome && (
-                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold shrink-0">✓ my pick</span>
+                        <span className={`text-[10px] ${myPickBadgeClass} px-1.5 py-0.5 rounded-full font-semibold shrink-0`}>✓ my pick</span>
                       )}
                       {hasLiveScore && liveGame && (
                         <span className="text-sm font-bold text-foreground">{liveGame.homeScore}</span>

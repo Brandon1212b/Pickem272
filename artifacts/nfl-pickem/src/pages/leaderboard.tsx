@@ -109,7 +109,7 @@ export default function Leaderboard() {
     },
   });
 
-  if (loadingBoard || loadingTrends || loadingExtremes) {
+  if (loadingBoard || loadingTrends || loadingExtremes || loadingMatches) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-64 w-full" />
@@ -128,8 +128,13 @@ export default function Leaderboard() {
     }
   }
 
-  // currentWeek = last completed week from extremes
-  const currentWeek = extremes?.week ?? 0;
+  // Standings follow the latest week with at least one completed game.
+  // This differs from weekly extremes, which intentionally uses the last
+  // fully completed week for its high/low comparison.
+  const currentWeek = Math.max(
+    1,
+    ...(matches ?? []).filter((match) => match.isCompleted).map((match) => match.week),
+  );
   const activeWeek = selectedWeek ?? currentWeek;
 
   // Per-week points for a given week (derived from cumulative trends)

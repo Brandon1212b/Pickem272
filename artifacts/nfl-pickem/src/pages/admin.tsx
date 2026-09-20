@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   useListMatches,
   useGetSeasonStatus,
@@ -214,9 +214,29 @@ export default function Admin() {
   const [espnLoading, setEspnLoading] = useState(false);
   const [espnError, setEspnError] = useState<string | null>(null);
   const [espnLastFetched, setEspnLastFetched] = useState<Date | null>(null);
+  const autoResultIds = useRef<Set<number>>(new Set());
 
   // Last pick update timestamps per user
   const [lastPicks, setLastPicks] = useState<Record<number, string>>({});
+
+  const setMatchResult = useSetMatchResult({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
+      },
+    },
+  });
+
+  const handleSetWinner = (matchId: number, winner: string) => {
+    if (!winner) return;
+    setMatchResult.mutate(
+      { matchId, data: { winner } },
+      {
+        onSuccess: () => toast.success("Match result set!"),
+        onError: () => toast.error("Failed to set result"),
+      },
+    );
+  };
 
   const loadEspnScores = useCallback(async () => {
     setEspnLoading(true);
@@ -226,12 +246,44 @@ export default function Admin() {
       setEspnGames(result.games);
       setEspnWeek(result.week);
       setEspnLastFetched(new Date());
+
+      const automaticResults = (matches ?? [])
+        .filter((match) => !match.isCompleted)
+        .map((match) => {
+          const live = findLiveGame(result.games, match.awayTeam, match.homeTeam);
+          return live?.completed && live.winner
+            ? { matchId: match.id, winner: live.winner }
+            : null;
+        })
+        .filter((result): result is { matchId: number; winner: string } => result !== null)
+        .filter((result) => !autoResultIds.current.has(result.matchId));
+
+      if (automaticResults.length > 0) {
+        const recorded = await Promise.all(
+          automaticResults.map(async ({ matchId, winner }) => {
+            autoResultIds.current.add(matchId);
+            try {
+              await setMatchResult.mutateAsync({ matchId, data: { winner } });
+              return true;
+            } catch {
+              autoResultIds.current.delete(matchId);
+              return false;
+            }
+          }),
+        );
+        const recordedCount = recorded.filter(Boolean).length;
+        if (recordedCount > 0) {
+          toast.success(
+            `Automatically recorded ${recordedCount} final result${recordedCount === 1 ? "" : "s"}.`,
+          );
+        }
+      }
     } catch (e) {
       setEspnError(String(e));
     } finally {
       setEspnLoading(false);
     }
-  }, []);
+  }, [matches, setMatchResult]);
 
   // Auto-fetch on mount, then every 60 seconds
   useEffect(() => {
@@ -263,24 +315,8 @@ export default function Admin() {
     },
   });
 
-  const setMatchResult = useSetMatchResult({
-    mutation: {
-      onSuccess: () => {
-        toast.success("Match result set!");
-        queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
-      },
-      onError: () => toast.error("Failed to set result"),
-    },
-  });
-
-
   const handleModeToggle = (checked: boolean) => {
     updateSeasonMode.mutate({ data: { mode: checked ? "in-season" : "pre-season" } });
-  };
-
-  const handleSetWinner = (matchId: number, winner: string) => {
-    if (!winner) return;
-    setMatchResult.mutate({ matchId, data: { winner } });
   };
 
 

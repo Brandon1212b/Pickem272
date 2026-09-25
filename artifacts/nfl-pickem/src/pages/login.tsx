@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useLoginUser } from "@workspace/api-client-react";
+import { useGetSeasonStatus, useLoginUser } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ export default function Login() {
   const [switchingAccount, setSwitchingAccount] = useState(false);
   const [, setLocation] = useLocation();
   const { user, setUser, logout } = useAuth();
+  const { data: seasonStatus } = useGetSeasonStatus();
+  const seasonLocked = seasonStatus?.mode === "in-season";
 
   const loginUser = useLoginUser({
     mutation: {
@@ -25,8 +27,16 @@ export default function Login() {
         toast.success(`Welcome, ${newUser.name}!`);
         setLocation("/picks");
       },
-      onError: () => {
-        toast.error("Failed to join — try again.");
+       onError: (error) => {
+         const statusCode =
+           typeof error === "object" && error !== null && "status" in error
+             ? (error as { status?: unknown }).status
+             : undefined;
+         if (seasonLocked && statusCode === 403) {
+           toast.error("Season is underway. Use the exact spelling of your existing team name.");
+         } else {
+           toast.error("Failed to join — try again.");
+         }
       }
     }
   });
@@ -127,17 +137,23 @@ export default function Login() {
           )}
           <div>
             <h2 className="text-lg font-semibold mb-1">
-              {switchingAccount ? "Sign in with a different name" : "Enter the League"}
+              {seasonLocked
+                ? "Season is underway"
+                : switchingAccount
+                ? "Sign in with a different name"
+                : "Enter the League"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {switchingAccount
+              {seasonLocked
+                ? "New team names are closed. Use the exact spelling of the name you used before to sign in."
+                : switchingAccount
                 ? "Type your name to switch accounts."
                 : "Enter your name to join or pick up where you left off."}
             </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
-              placeholder="Your name..."
+              placeholder={seasonLocked ? "Exact team name..." : "Your name..."}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-12 text-base px-4 bg-background"
@@ -151,7 +167,7 @@ export default function Login() {
               disabled={!name.trim() || loginUser.isPending}
               data-testid="button-submit"
             >
-              {loginUser.isPending ? "Joining…" : switchingAccount ? "Switch Account" : "Join League"}
+              {loginUser.isPending ? "Signing in…" : seasonLocked ? "Sign In" : switchingAccount ? "Switch Account" : "Join League"}
             </Button>
           </form>
           {switchingAccount && (
@@ -165,7 +181,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          No password needed — just your name.
+          {seasonLocked ? "Use the exact spelling of your existing team name." : "No password needed — just your name."}
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, picksTable } from "@workspace/db";
+import { db, usersTable, picksTable, seasonConfigTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginUserBody } from "@workspace/api-zod";
 
@@ -23,6 +23,18 @@ router.post("/users/login", async (req, res) => {
   const existing = await db.select().from(usersTable).where(eq(usersTable.name, name)).limit(1);
   if (existing.length > 0) {
     res.status(200).json(serializeUser(existing[0]));
+    return;
+  }
+
+  const [seasonConfig] = await db
+    .select({ mode: seasonConfigTable.mode })
+    .from(seasonConfigTable)
+    .limit(1);
+  if (seasonConfig?.mode === "in-season") {
+    res.status(403).json({
+      error: "SEASON_LOCKED",
+      message: "The season is underway. Sign in using the exact spelling of your existing team name.",
+    });
     return;
   }
 

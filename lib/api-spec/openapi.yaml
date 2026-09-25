@@ -61,6 +61,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+        "403":
+          description: Season is locked and the supplied name does not match an existing player
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, message]
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
 
   /users:
     get:

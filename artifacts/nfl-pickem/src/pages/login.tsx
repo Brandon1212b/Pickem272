@@ -19,13 +19,14 @@ export default function Login() {
   const { user, setUser, logout } = useAuth();
   const { data: seasonStatus } = useGetSeasonStatus();
   const seasonLocked = seasonStatus?.mode === "in-season";
+  const postLoginPath = seasonLocked ? "/recap" : "/picks";
 
   const loginUser = useLoginUser({
     mutation: {
       onSuccess: (newUser) => {
         setUser(newUser);
         toast.success(`Welcome, ${newUser.name}!`);
-        setLocation("/picks");
+        setLocation(postLoginPath);
       },
        onError: (error) => {
          const statusCode =
@@ -83,7 +84,7 @@ export default function Login() {
             </div>
             <Button
               className="w-full h-12 text-base font-semibold"
-              onClick={() => setLocation("/picks")}
+              onClick={() => setLocation(postLoginPath)}
             >
               Continue as {user.name}
             </Button>

@@ -291,7 +291,7 @@ export default function Dashboard() {
               return (
                 <div
                   key={pop.matchId}
-                  className={`rounded-xl border-2 p-3 space-y-2 relative ${
+                  className={`rounded-xl border-2 p-2.5 space-y-1.5 relative ${
                     userCorrect
                       ? "border-green-500 bg-green-500/5"
                       : userWrong
@@ -315,8 +315,8 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2">
-                    <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${userPickedAway ? "font-bold text-primary" : ""}`}>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`flex items-center gap-1 flex-1 min-w-0 ${userPickedAway ? "font-bold text-primary" : ""}`}>
                       <TeamLogo team={pop.awayTeam} size={20} />
                       <span className="text-sm truncate">{pop.awayTeam}</span>
                       {hasLiveScore && liveGame && (
@@ -327,7 +327,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">@</span>
-                    <div className={`flex items-center gap-1.5 flex-1 min-w-0 justify-end ${userPickedHome ? "font-bold text-primary" : ""}`}>
+                    <div className={`flex items-center gap-1 flex-1 min-w-0 justify-end ${userPickedHome ? "font-bold text-primary" : ""}`}>
                       {userPickedHome && (
                         <span className={`text-[10px] ${myPickBadgeClass} px-1.5 py-0.5 rounded-full font-semibold shrink-0`}>✓ my pick</span>
                       )}
@@ -353,7 +353,7 @@ export default function Dashboard() {
                   </div>
 
                   {(pop.awayPickCount + pop.homePickCount) > 0 ? (
-                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex">
+                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden flex">
                       {pop.awayPickCount > 0 && (
                         <div
                           className="h-full rounded-l-full"
@@ -368,13 +368,8 @@ export default function Dashboard() {
                       )}
                     </div>
                   ) : (
-                    <div className="h-2 w-full bg-secondary rounded-full" />
+                    <div className="h-1.5 w-full bg-secondary rounded-full" />
                   )}
-
-                  <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
-                    <span>{pop.awayPickPct}%</span>
-                    <span>{pop.homePickPct}%</span>
-                  </div>
                 </div>
               );
             })

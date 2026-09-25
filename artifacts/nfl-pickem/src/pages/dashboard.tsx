@@ -11,6 +11,13 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TeamLogo } from "@/lib/team-logos";
 import { getTeamSplitColors } from "@/lib/team-colors";
 
@@ -24,15 +31,17 @@ function PickerAvatars({
   names,
   colorMap = {},
   limit = 5,
+  onClick,
 }: {
   names: string[];
   colorMap?: Record<string, string>;
   limit?: number;
+  onClick?: () => void;
 }) {
   const shown = names.slice(0, limit);
   const extra = names.length - limit;
-  return (
-    <div className="flex items-center">
+  const content = (
+    <>
       <div className="flex -space-x-1.5">
         {shown.map((name, i) => (
           <div
@@ -53,7 +62,20 @@ function PickerAvatars({
       {names.length > 0 && (
         <span className="ml-1 text-[10px] text-muted-foreground font-medium">{names.length}</span>
       )}
-    </div>
+    </>
+  );
+
+  if (names.length === 0) return <div className="flex items-center">{content}</div>;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center rounded-md hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      aria-label={`Show ${names.length} picker${names.length === 1 ? "" : "s"}`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -127,6 +149,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   // null = default (active week), number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [selectedPickers, setSelectedPickers] = useState<{ team: string; names: string[] } | null>(null);
 
   const { data: status } = useGetSeasonStatus();
   const { data: allMatches } = useListMatches();
@@ -317,8 +340,16 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <PickerAvatars names={pop.awayPickerNames} colorMap={userColorMap} />
-                    <PickerAvatars names={pop.homePickerNames} colorMap={userColorMap} />
+                    <PickerAvatars
+                      names={pop.awayPickerNames}
+                      colorMap={userColorMap}
+                      onClick={() => setSelectedPickers({ team: pop.awayTeam, names: pop.awayPickerNames })}
+                    />
+                    <PickerAvatars
+                      names={pop.homePickerNames}
+                      colorMap={userColorMap}
+                      onClick={() => setSelectedPickers({ team: pop.homeTeam, names: pop.homePickerNames })}
+                    />
                   </div>
 
                   {(pop.awayPickCount + pop.homePickCount) > 0 ? (
@@ -355,6 +386,34 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      <Dialog
+        open={selectedPickers !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPickers(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{selectedPickers?.team} pickers</DialogTitle>
+            <DialogDescription>
+              {selectedPickers?.names.length ?? 0} player{selectedPickers?.names.length === 1 ? "" : "s"} picked this team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-72 overflow-y-auto space-y-2">
+            {selectedPickers?.names.map((name, index) => (
+              <div key={`${name}-${index}`} className="flex items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                  style={{ backgroundColor: userColorMap[name] ?? "#888888" }}
+                >
+                  {getInitials(name)}
+                </div>
+                <span className="text-sm font-medium">{name}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

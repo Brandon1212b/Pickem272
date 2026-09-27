@@ -175,6 +175,18 @@ export default function Dashboard() {
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
   const displayWeek = selectedWeek ?? activeWeek;
+  const pointsByWeek = useMemo(() => {
+    const matchWeekById = new Map((allMatches ?? []).map((match) => [match.id, match.week]));
+    const totals = new Map<number, number>();
+
+    for (const pick of picks ?? []) {
+      const week = pick.match?.week ?? matchWeekById.get(pick.matchId);
+      if (week === undefined) continue;
+      totals.set(week, (totals.get(week) ?? 0) + pick.pointsEarned);
+    }
+
+    return totals;
+  }, [allMatches, picks]);
 
   // Fetch pick popularity for the selected week via direct fetch (supports week param)
   const { data: popularity } = useQuery<PopularityItem[]>({
@@ -250,13 +262,16 @@ export default function Dashboard() {
               <button
                 key={week}
                 onClick={() => setSelectedWeek(week === activeWeek ? null : week)}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                className={`flex flex-shrink-0 min-w-[3.25rem] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold leading-none transition-colors ${
                   displayWeek === week
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 }`}
               >
-                W{week}
+                <span>W{week}</span>
+                <span className="text-[9px] font-medium opacity-75">
+                  {pointsByWeek.get(week) ?? 0} pts
+                </span>
               </button>
             ))}
           </div>

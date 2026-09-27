@@ -195,6 +195,9 @@ export default function Dashboard() {
     () => new Set((allMatches ?? []).filter((match) => match.isCompleted).map((match) => match.week)),
     [allMatches],
   );
+  const gamesRemainingThisWeek = (allMatches ?? []).filter(
+    (match) => match.week === displayWeek && !match.isCompleted,
+  ).length;
 
   // Fetch pick popularity for the selected week via direct fetch (supports week param)
   const { data: popularity } = useQuery<PopularityItem[]>({
@@ -239,6 +242,9 @@ export default function Dashboard() {
           <CardContent className="p-4">
             <p className="text-muted-foreground text-xs font-medium">Week {displayWeek} Points</p>
             <h2 className="text-3xl font-bold">{pointsByWeek.get(displayWeek) ?? 0}</h2>
+            <p className="text-muted-foreground text-[10px] font-medium mt-1">
+              {gamesRemainingThisWeek} {gamesRemainingThisWeek === 1 ? "game" : "games"} remaining
+            </p>
           </CardContent>
         </Card>
         <Card>

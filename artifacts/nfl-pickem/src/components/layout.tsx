@@ -11,6 +11,7 @@ import {
   getGetUserPicksQueryKey,
   getGetUserPicksForWeekQueryKey,
   getGetSeasonStatusQueryKey,
+  getGetLeaderboardQueryKey,
 } from "@workspace/api-client-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -41,12 +42,18 @@ function UserAvatar({ name, color, size = "sm" }: { name: string; color?: string
 
 function NavStats({ userId, disabled }: { userId: number; disabled: boolean }) {
   const [, setLocation] = useLocation();
-  const { data: leaderboard } = useGetLeaderboard();
+  const { data: leaderboard } = useGetLeaderboard({
+    query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 30_000 },
+  });
   const { data: status } = useGetSeasonStatus();
 
   const lastWeek = status?.lastCompletedWeek ?? 0;
   const { data: weekPicks } = useGetUserPicksForWeek(userId, lastWeek, {
-    query: { enabled: lastWeek > 0, queryKey: getGetUserPicksForWeekQueryKey(userId, lastWeek) },
+    query: {
+      enabled: lastWeek > 0,
+      queryKey: getGetUserPicksForWeekQueryKey(userId, lastWeek),
+      refetchInterval: 30_000,
+    },
   });
 
   const entry = leaderboard?.find((e) => e.userId === userId);
@@ -165,11 +172,14 @@ function ProfileButton() {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
-  const { data: status } = useGetSeasonStatus({ query: { enabled: !!user, queryKey: getGetSeasonStatusQueryKey() } });
+  const { data: status } = useGetSeasonStatus({
+    query: { enabled: !!user, queryKey: getGetSeasonStatusQueryKey(), refetchInterval: 30_000 },
+  });
   const { data: userPicks } = useGetUserPicks(user?.id || 0, {
     query: {
       enabled: !!user?.id,
       queryKey: getGetUserPicksQueryKey(user?.id || 0),
+      refetchInterval: 30_000,
     },
   });
 

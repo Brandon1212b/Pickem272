@@ -7,6 +7,7 @@ import {
   useSavePicks,
   useAutofillPicks,
   getGetUserPicksQueryKey,
+  getListMatchesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -106,9 +107,15 @@ export default function Picks() {
   const queryClient = useQueryClient();
 
   const { data: status, isLoading: loadingStatus } = useGetSeasonStatus();
-  const { data: matches, isLoading: loadingMatches } = useListMatches();
+  const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
+    query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
+  });
   const { data: picks, isLoading: loadingPicks } = useGetUserPicks(user?.id || 0, {
-    query: { enabled: !!user?.id, queryKey: getGetUserPicksQueryKey(user?.id || 0) },
+    query: {
+      enabled: !!user?.id,
+      queryKey: getGetUserPicksQueryKey(user?.id || 0),
+      refetchInterval: 30_000,
+    },
   });
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});

@@ -7,6 +7,7 @@ import {
   useGetUserPicks,
   useGetLeaderboard,
   getGetUserPicksQueryKey,
+  getListMatchesQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,7 +153,9 @@ export default function Dashboard() {
   const [selectedPickers, setSelectedPickers] = useState<{ team: string; names: string[] } | null>(null);
 
   const { data: status } = useGetSeasonStatus();
-  const { data: allMatches } = useListMatches();
+  const { data: allMatches } = useListMatches(undefined, {
+    query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
+  });
   const { data: picks } = useGetUserPicks(user?.id || 0, {
     query: { enabled: !!user?.id, queryKey: getGetUserPicksQueryKey(user?.id || 0) },
   });
@@ -182,6 +185,7 @@ export default function Dashboard() {
       return res.json() as Promise<PopularityItem[]>;
     },
     enabled: displayWeek > 0,
+    refetchInterval: 30_000,
   });
 
   // Map user names → their avatar color (for picker avatars)

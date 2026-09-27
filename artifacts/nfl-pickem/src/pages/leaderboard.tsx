@@ -6,6 +6,10 @@ import {
   useGetUserPicks,
   useListMatches,
   getGetUserPicksQueryKey,
+  getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
+  getGetWeeklyExtremesQueryKey,
+  getListMatchesQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,10 +98,18 @@ function BadgePop({
 }
 
 export default function Leaderboard() {
-  const { data: leaderboard, isLoading: loadingBoard } = useGetLeaderboard();
-  const { data: trends, isLoading: loadingTrends } = useGetLeaderboardTrends();
-  const { data: extremes, isLoading: loadingExtremes } = useGetWeeklyExtremes();
-  const { data: matches, isLoading: loadingMatches } = useListMatches();
+  const { data: leaderboard, isLoading: loadingBoard } = useGetLeaderboard({
+    query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 30_000 },
+  });
+  const { data: trends, isLoading: loadingTrends } = useGetLeaderboardTrends({
+    query: { queryKey: getGetLeaderboardTrendsQueryKey(), refetchInterval: 30_000 },
+  });
+  const { data: extremes, isLoading: loadingExtremes } = useGetWeeklyExtremes({
+    query: { queryKey: getGetWeeklyExtremesQueryKey(), refetchInterval: 30_000 },
+  });
+  const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
+    query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
+  });
 
   // null = follow active week; number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);

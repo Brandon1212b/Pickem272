@@ -7,6 +7,9 @@ import {
   useListUsers,
   useSetWeekStoryline,
   getListMatchesQueryKey,
+  getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
+  getGetWeeklyExtremesQueryKey,
   getGetSeasonStatusQueryKey,
   getListUsersQueryKey,
 } from "@workspace/api-client-react";
@@ -120,6 +123,28 @@ export default function Admin() {
   const { data: matches, isLoading: loadingMatches } = useListMatches();
   const { data: users, isLoading: loadingUsers } = useListUsers();
 
+  const invalidateResultQueries = () => {
+    const queryKeys = [
+      getListMatchesQueryKey(),
+      getGetLeaderboardQueryKey(),
+      getGetLeaderboardTrendsQueryKey(),
+      getGetWeeklyExtremesQueryKey(),
+      getGetSeasonStatusQueryKey(),
+      ["pick-popularity"],
+      ["weekly-recap"],
+      ["season-recap"],
+    ];
+    for (const queryKey of queryKeys) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+    void queryClient.invalidateQueries({
+      predicate: (query) => {
+        const firstKey = query.queryKey[0];
+        return typeof firstKey === "string" && firstKey.startsWith("/api/picks/user/");
+      },
+    });
+  };
+
   const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
   const [weekToReset, setWeekToReset] = useState<number | null>(null);
   const [resettingWeek, setResettingWeek] = useState(false);
@@ -222,7 +247,7 @@ export default function Admin() {
   const setMatchResult = useSetMatchResult({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
+        invalidateResultQueries();
       },
     },
   });
@@ -327,7 +352,7 @@ export default function Admin() {
       const res = await fetch(`/api/admin/weeks/${weekToReset}/results`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
       toast.success(`Week ${weekToReset} results cleared`);
-      queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
+      invalidateResultQueries();
       setWeekToReset(null);
     } catch {
       toast.error("Failed to reset week results");

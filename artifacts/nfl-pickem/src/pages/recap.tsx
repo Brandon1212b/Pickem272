@@ -8,6 +8,8 @@ import {
   usePostSmackMessage,
   useGetLeaderboard,
   getListSmackMessagesQueryKey,
+  getGetSeasonStatusQueryKey,
+  getGetLeaderboardQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,8 +100,12 @@ export default function Recap() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [showSeasonRecap, setShowSeasonRecap] = useState(false);
 
-  const { data: status } = useGetSeasonStatus();
-  const { data: leaderboard } = useGetLeaderboard();
+  const { data: status } = useGetSeasonStatus({
+    query: { queryKey: getGetSeasonStatusQueryKey(), refetchInterval: 30_000 },
+  });
+  const { data: leaderboard } = useGetLeaderboard({
+    query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 30_000 },
+  });
   const { data: smackMessages } = useListSmackMessages({
     query: { refetchInterval: 15000, queryKey: getListSmackMessagesQueryKey() },
   });
@@ -124,6 +130,7 @@ export default function Recap() {
       return res.json() as Promise<RecapData>;
     },
     enabled: displayWeek > 0,
+    refetchInterval: 30_000,
   });
 
   const { data: seasonRecap, isLoading: loadingSeasonRecap } = useQuery<SeasonRecapData>({
@@ -134,6 +141,7 @@ export default function Recap() {
       return res.json() as Promise<SeasonRecapData>;
     },
     enabled: showSeasonRecap,
+    refetchInterval: 30_000,
   });
 
   const userColorMap = useMemo(() => {

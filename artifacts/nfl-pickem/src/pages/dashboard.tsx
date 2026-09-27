@@ -173,6 +173,10 @@ export default function Dashboard() {
   });
 
   const userStats = leaderboard?.find((e) => e.userId === user?.id);
+  const resolvedPickCount = (userStats?.correctPicks ?? 0) + (userStats?.wrongPicks ?? 0);
+  const accuracy = resolvedPickCount > 0
+    ? Math.round(((userStats?.correctPicks ?? 0) / resolvedPickCount) * 100)
+    : null;
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
   const displayWeek = selectedWeek ?? activeWeek;
   const pointsByWeek = useMemo(() => {
@@ -236,10 +240,8 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs font-medium">Record</p>
-            <h2 className="text-2xl font-bold">
-              {userStats ? `${userStats.correctPicks}-${userStats.wrongPicks}` : "0-0"}
-            </h2>
+            <p className="text-muted-foreground text-xs font-medium">Accuracy</p>
+            <h2 className="text-3xl font-bold">{accuracy !== null ? `${accuracy}%` : "—"}</h2>
           </CardContent>
         </Card>
       </div>

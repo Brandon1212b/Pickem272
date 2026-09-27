@@ -58,6 +58,7 @@ type TrajectoryDotProps = {
   fill?: string;
   latestIndex: number;
   initials: string;
+  showLatestBadge: boolean;
 };
 
 function TrajectoryDot({
@@ -67,10 +68,11 @@ function TrajectoryDot({
   fill = "#007AFF",
   latestIndex,
   initials,
+  showLatestBadge,
 }: TrajectoryDotProps) {
   if (cx === undefined || cy === undefined) return null;
 
-  if (index === latestIndex) {
+  if (index === latestIndex && showLatestBadge) {
     return (
       <g>
         <circle cx={cx} cy={cy} r={11} fill={fill} stroke="hsl(var(--card))" strokeWidth={2} />
@@ -91,6 +93,42 @@ function TrajectoryDot({
   }
 
   return <circle cx={cx} cy={cy} r={3} fill={fill} stroke={fill} strokeWidth={2} />;
+}
+
+type TrajectoryLegendEntry = {
+  dataKey?: string | number;
+  value?: string | number;
+  color?: string;
+};
+
+function TrajectoryLegend({
+  payload,
+  visibleUserIds,
+  showFullLeague,
+}: {
+  payload?: TrajectoryLegendEntry[];
+  visibleUserIds: Set<number>;
+  showFullLeague: boolean;
+}) {
+  const entries = (payload ?? []).filter((entry) => {
+    if (showFullLeague) return true;
+    if (typeof entry.dataKey !== "string" || !entry.dataKey.startsWith("user_")) return false;
+    return visibleUserIds.has(Number(entry.dataKey.slice("user_".length)));
+  });
+
+  return (
+    <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-4 text-xs">
+      {entries.map((entry) => (
+        <span key={String(entry.dataKey)} className="flex items-center gap-1.5">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entry.color ?? "hsl(var(--muted-foreground))" }}
+          />
+          <span className="text-muted-foreground">{entry.value ?? entry.dataKey}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // Click-to-open badge popover — no extra dependencies needed
@@ -194,7 +232,12 @@ export default function Leaderboard() {
     const rankB = leaderboard?.find((entry) => entry.userId === b.userId)?.rank ?? Number.MAX_SAFE_INTEGER;
     return rankA - rankB || a.name.localeCompare(b.name);
   });
-  const trajectoryUsers = showFullLeague ? rankedTrends : rankedTrends.slice(0, 5);
+  const topFiveTrends = rankedTrends.slice(0, 5);
+  const topFiveIds = new Set(topFiveTrends.map((user) => user.userId));
+  // Draw background lines first so the highlighted top five stay visually prominent.
+  const trajectoryUsers = showFullLeague
+    ? rankedTrends
+    : [...rankedTrends.slice(5), ...topFiveTrends];
   const totalTrendWeeks = rankedTrends.reduce(
     (maxWeeks, user) => Math.max(maxWeeks, user.weeklyPoints.length),
     0,
@@ -211,6 +254,15 @@ export default function Leaderboard() {
     });
     return dataPoint;
   });
+  const topFiveValues = trajectoryWeekIndexes.flatMap((weekIndex) =>
+    topFiveTrends.map((user) => user.weeklyPoints[weekIndex] ?? 0),
+  );
+  const compactYAxisDomain: [number, number] = topFiveValues.length > 0
+    ? [
+        Math.max(0, Math.min(...topFiveValues) - 2),
+        Math.max(...topFiveValues) + 2,
+      ]
+    : [0, 2];
 
   // Per-week points for a given week (derived from cumulative trends)
   const getWeekPts = (userId: number, week: number): number => {
@@ -479,7 +531,7 @@ export default function Leaderboard() {
                   className="text-xs"
                   tickLine={false}
                   axisLine={false}
-                  domain={showFullLeague ? [0, "auto"] : ["dataMin - 2", "dataMax + 2"]}
+                  domain={showFullLeague ? [0, "auto"] : compactYAxisDomain}
                 />
                 <Tooltip
                   contentStyle={{
@@ -488,25 +540,44 @@ export default function Leaderboard() {
                     backgroundColor: "hsl(var(--card))",
                   }}
                 />
-                <Legend wrapperStyle={{ paddingTop: "16px" }} />
+                <Legend
+                  content={
+                    <TrajectoryLegend
+                      visibleUserIds={topFiveIds}
+                      showFullLeague={showFullLeague}
+                    />
+                  }
+                />
                 {trajectoryUsers.map((u, idx) => (
-                  <Line
-                    key={u.userId}
-                    type="monotone"
-                    dataKey={`user_${u.userId}`}
-                    name={u.name}
-                    stroke={getUserColor(u.userId, idx)}
-                    strokeWidth={2.5}
-                    dot={(props) => (
-                      <TrajectoryDot
-                        {...props}
-                        fill={getUserColor(u.userId, idx)}
-                        initials={getInitials(u.name)}
-                        latestIndex={chartData.length - 1}
+                  (() => {
+                    const isHighlighted = showFullLeague || topFiveIds.has(u.userId);
+                    const colorIndex = rankedTrends.findIndex((trend) => trend.userId === u.userId);
+                    const color = isHighlighted
+                      ? getUserColor(u.userId, colorIndex)
+                      : "hsl(var(--muted-foreground) / 0.35)";
+
+                    return (
+                      <Line
+                        key={u.userId}
+                        type="monotone"
+                        dataKey={`user_${u.userId}`}
+                        name={u.name}
+                        legendType={isHighlighted ? "line" : "none"}
+                        stroke={color}
+                        strokeWidth={isHighlighted ? 2.5 : 1.5}
+                        dot={(props) => (
+                          <TrajectoryDot
+                            {...props}
+                            fill={color}
+                            initials={getInitials(u.name)}
+                            latestIndex={chartData.length - 1}
+                            showLatestBadge={isHighlighted}
+                          />
+                        )}
+                        activeDot={isHighlighted ? { r: 5 } : false}
                       />
-                    )}
-                    activeDot={{ r: 5 }}
-                  />
+                    );
+                  })()
                 ))}
               </LineChart>
             </ResponsiveContainer>

@@ -486,7 +486,10 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
   }
 
   // Weekly winners
-  const weeklyWinners: { week: number; userId: number; name: string; avatar: string | null; points: number }[] = [];
+  const weeklyWinners: {
+    week: number;
+    winners: { userId: number; name: string; avatar: string | null; points: number }[];
+  }[] = [];
   for (const week of completedWeeks) {
     const weekMatchIds = new Set(completedMatches.filter((m) => m.week === week).map((m) => m.id));
     const scores = users.map((u) => {
@@ -495,8 +498,8 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     });
     const maxPts = Math.max(...scores.map((s) => s.points));
     const winners = scores.filter((s) => s.points === maxPts && maxPts > 0);
-    if (winners[0]) {
-      weeklyWinners.push({ week, ...winners[0] });
+    if (winners.length > 0) {
+      weeklyWinners.push({ week, winners });
     }
   }
 

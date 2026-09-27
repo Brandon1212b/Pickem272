@@ -46,7 +46,10 @@ interface RecapData {
 
 interface SeasonRecapData {
   achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[];
-  weeklyWinners: { week: number; userId: number; name: string; avatar: string | null; points: number }[];
+  weeklyWinners: {
+    week: number;
+    winners: { userId: number; name: string; avatar: string | null; points: number }[];
+  }[];
 }
 
 function HighlightIcon({ type }: { type: string }) {
@@ -580,11 +583,24 @@ function SeasonRecapSection({
           </CardHeader>
           <CardContent className="space-y-2">
             {data.weeklyWinners.map((w) => (
-              <div key={w.week} className="flex items-center gap-3 py-1.5">
+              <div key={w.week} className="flex items-start gap-3 py-1.5">
                 <span className="text-xs font-bold text-muted-foreground w-10 shrink-0">Wk {w.week}</span>
-                <AvatarBubble name={w.name} color={userColorMap[w.name] ?? w.avatar} size={26} />
-                <span className="flex-1 text-sm font-semibold">{w.name}</span>
-                <span className="text-xs font-bold text-primary">{w.points} pts</span>
+                <div className="flex -space-x-1.5 pt-0.5 shrink-0">
+                  {w.winners.map((winner) => (
+                    <AvatarBubble
+                      key={winner.userId}
+                      name={winner.name}
+                      color={userColorMap[winner.name] ?? winner.avatar}
+                      size={26}
+                    />
+                  ))}
+                </div>
+                <span className="flex-1 min-w-0 text-sm font-semibold">
+                  {w.winners.map((winner) => winner.name).join(", ")}
+                </span>
+                <span className="text-xs font-bold text-primary whitespace-nowrap">
+                  {w.winners[0]?.points ?? 0} pts
+                </span>
               </div>
             ))}
           </CardContent>

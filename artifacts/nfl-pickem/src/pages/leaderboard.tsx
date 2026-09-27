@@ -45,6 +45,54 @@ const truncateName = (name: string, maxLength: number = 10): string => {
   return name;
 };
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+type TrajectoryDotProps = {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  fill?: string;
+  latestIndex: number;
+  initials: string;
+};
+
+function TrajectoryDot({
+  cx,
+  cy,
+  index,
+  fill = "#007AFF",
+  latestIndex,
+  initials,
+}: TrajectoryDotProps) {
+  if (cx === undefined || cy === undefined) return null;
+
+  if (index === latestIndex) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={11} fill={fill} stroke="hsl(var(--card))" strokeWidth={2} />
+        <text
+          x={cx}
+          y={cy}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="white"
+          fontSize={7}
+          fontWeight={700}
+          pointerEvents="none"
+        >
+          {initials}
+        </text>
+      </g>
+    );
+  }
+
+  return <circle cx={cx} cy={cy} r={3} fill={fill} stroke={fill} strokeWidth={2} />;
+}
+
 // Click-to-open badge popover — no extra dependencies needed
 function BadgePop({
   emoji,
@@ -114,6 +162,7 @@ export default function Leaderboard() {
   // null = follow active week; number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [showFullLeague, setShowFullLeague] = useState(false);
   const { data: selectedUserPicks, isLoading: loadingSelectedUserPicks } = useGetUserPicks(selectedUserId ?? 0, {
     query: {
       enabled: selectedUserId !== null,
@@ -130,16 +179,6 @@ export default function Leaderboard() {
     );
   }
 
-  const chartData: Record<string, string | number>[] = [];
-  if (trends && trends.length > 0) {
-    const numWeeks = trends[0].weeklyPoints.length;
-    for (let w = 0; w < numWeeks; w++) {
-      const dataPoint: Record<string, string | number> = { week: `W${w + 1}` };
-      trends.forEach((u) => { dataPoint[truncateName(u.name)] = u.weeklyPoints[w]; });
-      chartData.push(dataPoint);
-    }
-  }
-
   // Standings follow the latest week with at least one completed game.
   // This differs from weekly extremes, which intentionally uses the last
   // fully completed week for its high/low comparison.
@@ -148,6 +187,30 @@ export default function Leaderboard() {
     ...(matches ?? []).filter((match) => match.isCompleted).map((match) => match.week),
   );
   const activeWeek = selectedWeek ?? currentWeek;
+
+  // Keep trajectory series in the same order as the current standings.
+  const rankedTrends = [...(trends ?? [])].sort((a, b) => {
+    const rankA = leaderboard?.find((entry) => entry.userId === a.userId)?.rank ?? Number.MAX_SAFE_INTEGER;
+    const rankB = leaderboard?.find((entry) => entry.userId === b.userId)?.rank ?? Number.MAX_SAFE_INTEGER;
+    return rankA - rankB || a.name.localeCompare(b.name);
+  });
+  const trajectoryUsers = showFullLeague ? rankedTrends : rankedTrends.slice(0, 5);
+  const totalTrendWeeks = rankedTrends.reduce(
+    (maxWeeks, user) => Math.max(maxWeeks, user.weeklyPoints.length),
+    0,
+  );
+  const firstTrajectoryWeek = showFullLeague ? 0 : Math.max(0, totalTrendWeeks - 4);
+  const trajectoryWeekIndexes = Array.from(
+    { length: Math.max(0, totalTrendWeeks - firstTrajectoryWeek) },
+    (_, index) => firstTrajectoryWeek + index,
+  );
+  const chartData: Record<string, string | number>[] = trajectoryWeekIndexes.map((weekIndex) => {
+    const dataPoint: Record<string, string | number> = { week: `W${weekIndex + 1}` };
+    trajectoryUsers.forEach((user) => {
+      dataPoint[`user_${user.userId}`] = user.weeklyPoints[weekIndex] ?? 0;
+    });
+    return dataPoint;
+  });
 
   // Per-week points for a given week (derived from cumulative trends)
   const getWeekPts = (userId: number, week: number): number => {
@@ -378,14 +441,46 @@ export default function Leaderboard() {
       {chartData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Season Trajectory</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle>Season Trajectory</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {showFullLeague ? "Full league · entire season" : "Top 5 · last 4 weeks"}
+                </p>
+              </div>
+              <div className="flex items-center rounded-lg border bg-secondary/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowFullLeague(false)}
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    !showFullLeague ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Top 5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowFullLeague(true)}
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    showFullLeague ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Full league
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                 <XAxis dataKey="week" className="text-xs" tickLine={false} axisLine={false} />
-                <YAxis className="text-xs" tickLine={false} axisLine={false} />
+                <YAxis
+                  className="text-xs"
+                  tickLine={false}
+                  axisLine={false}
+                  domain={showFullLeague ? [0, "auto"] : ["dataMin - 2", "dataMax + 2"]}
+                />
                 <Tooltip
                   contentStyle={{
                     borderRadius: "12px",
@@ -394,14 +489,22 @@ export default function Leaderboard() {
                   }}
                 />
                 <Legend wrapperStyle={{ paddingTop: "16px" }} />
-                {trends?.map((u, idx) => (
+                {trajectoryUsers.map((u, idx) => (
                   <Line
                     key={u.userId}
                     type="monotone"
-                    dataKey={truncateName(u.name)}
+                    dataKey={`user_${u.userId}`}
+                    name={u.name}
                     stroke={getUserColor(u.userId, idx)}
                     strokeWidth={2.5}
-                    dot={{ r: 3, strokeWidth: 2 }}
+                    dot={(props) => (
+                      <TrajectoryDot
+                        {...props}
+                        fill={getUserColor(u.userId, idx)}
+                        initials={getInitials(u.name)}
+                        latestIndex={chartData.length - 1}
+                      />
+                    )}
                     activeDot={{ r: 5 }}
                   />
                 ))}

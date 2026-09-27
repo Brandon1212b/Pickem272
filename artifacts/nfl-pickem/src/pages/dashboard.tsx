@@ -187,6 +187,10 @@ export default function Dashboard() {
 
     return totals;
   }, [allMatches, picks]);
+  const playedWeeks = useMemo(
+    () => new Set((allMatches ?? []).filter((match) => match.isCompleted).map((match) => match.week)),
+    [allMatches],
+  );
 
   // Fetch pick popularity for the selected week via direct fetch (supports week param)
   const { data: popularity } = useQuery<PopularityItem[]>({
@@ -262,13 +266,17 @@ export default function Dashboard() {
               <button
                 key={week}
                 onClick={() => setSelectedWeek(week === activeWeek ? null : week)}
+                title={playedWeeks.has(week) ? `Week ${week} has been played` : `Week ${week} has not been played`}
                 className={`flex flex-shrink-0 min-w-[3.25rem] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold leading-none transition-colors ${
                   displayWeek === week
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 }`}
               >
-                <span>W{week}</span>
+                <span className="flex items-center gap-1">
+                  W{week}
+                  {playedWeeks.has(week) && <span aria-label="Played" className="text-[10px] leading-none">✓</span>}
+                </span>
                 <span className="text-[9px] font-medium opacity-75">
                   {pointsByWeek.get(week) ?? 0} pts
                 </span>

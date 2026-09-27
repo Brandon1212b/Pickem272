@@ -243,7 +243,7 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-xs font-medium">Week {displayWeek} Points</p>
             <h2 className="text-3xl font-bold">{pointsByWeek.get(displayWeek) ?? 0}</h2>
             <p className="text-muted-foreground text-[10px] font-medium mt-1">
-              {gamesRemainingThisWeek} {gamesRemainingThisWeek === 1 ? "game" : "games"} remaining
+              {gamesRemainingThisWeek} remaining
             </p>
           </CardContent>
         </Card>

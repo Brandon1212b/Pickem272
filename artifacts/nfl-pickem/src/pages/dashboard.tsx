@@ -230,12 +230,15 @@ export default function Dashboard() {
           <CardContent className="p-4 flex flex-col">
             <p className="text-primary-foreground/70 text-xs font-medium">Rank</p>
             <h2 className="text-3xl font-bold">{userStats ? `#${userStats.rank}` : "—"}</h2>
+            <p className="text-primary-foreground/70 text-[10px] font-medium mt-1">
+              Record {userStats ? `${userStats.correctPicks}-${userStats.wrongPicks}` : "0-0"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs font-medium">Points</p>
-            <h2 className="text-3xl font-bold">{userStats?.totalPoints ?? 0}</h2>
+            <p className="text-muted-foreground text-xs font-medium">Week {displayWeek} Points</p>
+            <h2 className="text-3xl font-bold">{pointsByWeek.get(displayWeek) ?? 0}</h2>
           </CardContent>
         </Card>
         <Card>

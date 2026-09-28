@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield, Newspaper } from "lucide-react";
@@ -12,8 +12,12 @@ import {
   getGetUserPicksForWeekQueryKey,
   getGetSeasonStatusQueryKey,
   getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
+  getGetWeeklyExtremesQueryKey,
+  getListMatchesQueryKey,
 } from "@workspace/api-client-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PROFILE_COLORS = [
   "#007AFF", "#FF6B35", "#34C759", "#AF52DE",
@@ -172,6 +176,7 @@ function ProfileButton() {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: status } = useGetSeasonStatus({
     query: { enabled: !!user, queryKey: getGetSeasonStatusQueryKey(), refetchInterval: 30_000 },
   });
@@ -182,6 +187,46 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       refetchInterval: 30_000,
     },
   });
+
+  useEffect(() => {
+    if (!user) return;
+
+    let stopped = false;
+    const syncResults = async () => {
+      try {
+        const response = await fetch("/api/admin/sync-live-results", { method: "POST" });
+        if (!response.ok || stopped) return;
+
+        const data = await response.json() as { updated?: number };
+        if (!data.updated || stopped) return;
+
+        void queryClient.invalidateQueries({ queryKey: getListMatchesQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetLeaderboardQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetLeaderboardTrendsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetWeeklyExtremesQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetSeasonStatusQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getGetUserPicksQueryKey(user.id) });
+        void queryClient.invalidateQueries({ queryKey: ["pick-popularity"] });
+        void queryClient.invalidateQueries({ queryKey: ["weekly-recap"] });
+        void queryClient.invalidateQueries({ queryKey: ["season-recap"] });
+        void queryClient.invalidateQueries({
+          predicate: (query) => {
+            const firstKey = query.queryKey[0];
+            return typeof firstKey === "string" && firstKey.startsWith("/api/picks/user/");
+          },
+        });
+      } catch {
+        // A temporary ESPN/API failure should not interrupt the current page.
+      }
+    };
+
+    void syncResults();
+    const interval = window.setInterval(syncResults, 30_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [queryClient, user?.id]);
 
   if (!user && location !== "/") {
     setLocation("/");

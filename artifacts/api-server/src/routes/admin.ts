@@ -6,17 +6,35 @@ import { getLastCompletedWeek } from "../lib/season";
 
 const router = Router();
 
-router.patch("/admin/match/:matchId/result", async (req, res) => {
-  const paramsParsed = SetMatchResultParams.safeParse({ matchId: parseInt(req.params.matchId, 10) });
-  if (!paramsParsed.success) { res.status(400).json({ error: "Invalid matchId" }); return; }
-  const bodyParsed = SetMatchResultBody.safeParse(req.body);
-  if (!bodyParsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+type RecordedMatchResult = {
+  matchId: number;
+  winner: string;
+};
 
-  const { matchId } = paramsParsed.data;
-  const { winner } = bodyParsed.data;
+type LiveResultSyncResponse = {
+  updated: number;
+  results: RecordedMatchResult[];
+};
 
+const ESPN_TEAM_ALIASES: Record<string, string> = {
+  JAC: "JAX",
+  WSH: "WAS",
+  LVR: "LV",
+  SFO: "SF",
+  GNB: "GB",
+  NWE: "NE",
+  KAN: "KC",
+  NOR: "NO",
+  TAM: "TB",
+};
+
+function normalizeEspnTeam(abbreviation: string): string {
+  return ESPN_TEAM_ALIASES[abbreviation] ?? abbreviation;
+}
+
+async function recordMatchResult(matchId: number, winner: string) {
   const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, matchId)).limit(1);
-  if (!match) { res.status(404).json({ error: "Match not found" }); return; }
+  if (!match) return null;
 
   const [updated] = await db
     .update(matchesTable)
@@ -30,12 +48,109 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
     await db.update(picksTable).set({ pointsEarned: points }).where(eq(picksTable.id, pick.id));
   }
 
+  return updated;
+}
+
+async function refreshSeasonCompletion() {
   const allMatches = await db.select().from(matchesTable);
   const lastCompletedWeek = getLastCompletedWeek(allMatches);
   const [cfg] = await db.select().from(seasonConfigTable).limit(1);
   if (cfg) {
     await db.update(seasonConfigTable).set({ lastCompletedWeek }).where(eq(seasonConfigTable.id, cfg.id));
   }
+}
+
+async function fetchCompletedEspnGames(): Promise<{
+  awayTeam: string;
+  homeTeam: string;
+  winner: string;
+}[]> {
+  const espnRes = await fetch(
+    "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(8000),
+    },
+  );
+  if (!espnRes.ok) throw new Error(`ESPN returned ${espnRes.status}`);
+
+  const data = await espnRes.json() as any;
+  return ((data.events ?? []) as any[]).flatMap((event: any) => {
+    const competition = event.competitions?.[0];
+    const competitors = competition?.competitors ?? [];
+    const home = competitors.find((c: any) => c.homeAway === "home");
+    const away = competitors.find((c: any) => c.homeAway === "away");
+    const status = competition?.status?.type;
+    if (!status?.completed || !home?.team?.abbreviation || !away?.team?.abbreviation) return [];
+
+    const awayTeam = normalizeEspnTeam(away.team.abbreviation);
+    const homeTeam = normalizeEspnTeam(home.team.abbreviation);
+    const awayScore = parseInt(away.score ?? "0", 10);
+    const homeScore = parseInt(home.score ?? "0", 10);
+    const winner = awayScore > homeScore ? awayTeam : homeScore > awayScore ? homeTeam : null;
+    return winner ? [{ awayTeam, homeTeam, winner }] : [];
+  });
+}
+
+let liveResultSyncLastCheckedAt = 0;
+let liveResultSyncInFlight: Promise<LiveResultSyncResponse> | null = null;
+
+async function syncLiveResults(): Promise<LiveResultSyncResponse> {
+  const now = Date.now();
+  if (now - liveResultSyncLastCheckedAt < 15_000) {
+    return { updated: 0, results: [] };
+  }
+  if (liveResultSyncInFlight) return liveResultSyncInFlight;
+
+  liveResultSyncInFlight = (async () => {
+    const liveGames = await fetchCompletedEspnGames();
+    const matches = await db.select().from(matchesTable);
+    const pendingResults = liveGames.flatMap((game) => {
+      const match = matches.find(
+        (candidate) =>
+          !candidate.isCompleted &&
+          candidate.awayTeam === game.awayTeam &&
+          candidate.homeTeam === game.homeTeam,
+      );
+      return match ? [{ matchId: match.id, winner: game.winner }] : [];
+    });
+
+    const results: RecordedMatchResult[] = [];
+    for (const result of pendingResults) {
+      const updated = await recordMatchResult(result.matchId, result.winner);
+      if (updated) results.push(result);
+    }
+
+    if (results.length > 0) {
+      await refreshSeasonCompletion();
+    }
+
+    liveResultSyncLastCheckedAt = Date.now();
+    return { updated: results.length, results };
+  })();
+
+  try {
+    return await liveResultSyncInFlight;
+  } finally {
+    liveResultSyncInFlight = null;
+  }
+}
+
+router.patch("/admin/match/:matchId/result", async (req, res) => {
+  const paramsParsed = SetMatchResultParams.safeParse({ matchId: parseInt(req.params.matchId, 10) });
+  if (!paramsParsed.success) { res.status(400).json({ error: "Invalid matchId" }); return; }
+  const bodyParsed = SetMatchResultBody.safeParse(req.body);
+  if (!bodyParsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+
+  const { matchId } = paramsParsed.data;
+  const { winner } = bodyParsed.data;
+
+  const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, matchId)).limit(1);
+  if (!match) { res.status(404).json({ error: "Match not found" }); return; }
+
+  const updated = await recordMatchResult(matchId, winner);
+  if (!updated) { res.status(500).json({ error: "Failed to update match" }); return; }
+  await refreshSeasonCompletion();
 
   res.json({
     id: updated.id,
@@ -48,6 +163,14 @@ router.patch("/admin/match/:matchId/result", async (req, res) => {
     injuryWeatherFlags: updated.injuryWeatherFlags ?? null,
     gameTime: updated.gameTime ?? null,
   });
+});
+
+router.post("/admin/sync-live-results", async (_req, res) => {
+  try {
+    res.json(await syncLiveResults());
+  } catch (err) {
+    res.status(502).json({ error: String(err) });
+  }
 });
 
 // Reset all results for a week

@@ -246,9 +246,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background pb-20 md:pb-0">
+    <div className="min-h-[100dvh] flex flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       {user && (
-        <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-xl border-b border-border">
+        <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-xl border-b border-border pt-[env(safe-area-inset-top)]">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">
             <Link href={`/picks?week=${activeWeek}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
@@ -294,7 +294,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       {user && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl border-t border-border pb-safe">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center justify-around h-16 px-4">
               {navItems.map((item) => {
               const isActive = location === item.href;

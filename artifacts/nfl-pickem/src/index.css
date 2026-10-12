@@ -222,7 +222,29 @@
   * {
     @apply border-border;
   }
+  html {
+    height: 100%;
+    background-color: hsl(var(--background));
+  }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    min-height: 100%;
+    /* Fill the status-bar / notch area so it is not click-through in standalone mode */
+    background-color: hsl(var(--background));
+  }
+}
+
+/* Solid fill behind the iOS status bar in standalone / Add to Home Screen mode */
+@supports (padding: env(safe-area-inset-top)) {
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background-color: hsl(var(--background));
+    z-index: 50;
+    pointer-events: none;
   }
 }

@@ -125,7 +125,6 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
-  const [showActualRecords, setShowActualRecords] = useState(true);
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page
@@ -603,29 +602,20 @@ export default function Picks() {
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
-          const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
-          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
+          const actualMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+          const projectedMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
           return (
             <Card className="w-full overflow-hidden">
               <CardHeader className="pb-2 px-3 sm:px-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">Team Records</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">{showActualRecords ? "Current records" : "Your projected finish"} · color is your accuracy. Tap to filter.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Actual record (colored by your accuracy) · proj is your projected finish. Tap to filter.</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowActualRecords((v) => !v)}
-                      className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
-                    >
-                      {showActualRecords ? "Show predicted" : "Show actual"}
-                    </button>
-                    <div className="flex items-center gap-2 text-[9px] font-semibold">
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
-                    </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
                   </div>
                 </div>
               </CardHeader>
@@ -636,15 +626,16 @@ export default function Picks() {
                     <div className="space-y-1.5">
                       {divisions.map(({ div, teams }) => {
                         const divTeams = [...teams].sort((a, b) =>
-                          (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
-                          (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                          (actualMap[b]?.wins ?? 0) - (actualMap[a]?.wins ?? 0) ||
+                          (actualMap[a]?.losses ?? 0) - (actualMap[b]?.losses ?? 0)
                         );
                         return (
                           <div key={div} className="flex items-center gap-2 w-full">
                             <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
                             <div className="flex gap-1.5 flex-1 min-w-0 w-full">
                               {divTeams.map((team) => {
-                                const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
+                                const actual = actualMap[team] ?? { wins: 0, losses: 0, pct: null };
+                                const projected = projectedMap[team] ?? { wins: 0, losses: 0 };
                                 const isSelected = selectedTeamFilter === team;
                                 return (
                                   <button
@@ -660,11 +651,12 @@ export default function Picks() {
                                     <TeamLogo team={team} size={22} />
                                     <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                     <span className={cn(
-                                      "text-[10px] font-bold tabular-nums",
-                                      pct === null ? "text-muted-foreground" : pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-destructive"
+                                      "text-[10px] font-bold tabular-nums leading-tight",
+                                      actual.pct === null ? "text-muted-foreground" : actual.pct >= 70 ? "text-green-500" : actual.pct >= 50 ? "text-amber-500" : "text-destructive"
                                     )}>
-                                      {wins}-{losses}{pct !== null ? ` · ${pct}%` : ""}
+                                      {actual.wins}-{actual.losses}{actual.pct !== null ? ` · ${actual.pct}%` : ""}
                                     </span>
+                                    <span className="text-[8px] text-muted-foreground tabular-nums leading-tight">proj {projected.wins}-{projected.losses}</span>
                                   </button>
                                 );
                               })}
@@ -762,29 +754,20 @@ export default function Picks() {
 
       {/* Team records (if picks exist) */}
       {teamRecordsSorted.length > 0 && (() => {
-        const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
-        const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
+        const actualMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+        const projectedMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
         return (
           <Card className="overflow-hidden">
             <CardHeader className="pb-1 pt-3 px-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-sm font-semibold">Team Records</CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{showActualRecords ? "Current records" : "Projected finish"} · color is your accuracy</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Actual (colored) · proj is your projected finish</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowActualRecords((v) => !v)}
-                    className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
-                  >
-                    {showActualRecords ? "Predicted" : "Actual"}
-                  </button>
-                  <div className="flex items-center gap-1.5 text-[8px] font-semibold">
-                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
-                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
-                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
-                  </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-semibold">
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
                 </div>
               </div>
             </CardHeader>
@@ -795,15 +778,16 @@ export default function Picks() {
                   <div className="space-y-1">
                     {divisions.map(({ div, teams }) => {
                       const divTeams = [...teams].sort((a, b) =>
-                        (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
-                        (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                        (actualMap[b]?.wins ?? 0) - (actualMap[a]?.wins ?? 0) ||
+                        (actualMap[a]?.losses ?? 0) - (actualMap[b]?.losses ?? 0)
                       );
                       return (
                         <div key={div} className="flex items-center gap-1.5 w-full">
                           <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
                           <div className="flex gap-1 flex-1 min-w-0 w-full">
                             {divTeams.map((team) => {
-                              const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
+                              const actual = actualMap[team] ?? { wins: 0, losses: 0, pct: null };
+                              const projected = projectedMap[team] ?? { wins: 0, losses: 0 };
                               const isSelected = selectedTeamFilter === team;
                               return (
                                 <button
@@ -819,11 +803,12 @@ export default function Picks() {
                                   <TeamLogo team={team} size={18} />
                                   <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                   <span className={cn(
-                                    "text-[9px] font-bold tabular-nums",
-                                    pct === null ? "text-muted-foreground" : pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-destructive"
+                                    "text-[9px] font-bold tabular-nums leading-tight",
+                                    actual.pct === null ? "text-muted-foreground" : actual.pct >= 70 ? "text-green-500" : actual.pct >= 50 ? "text-amber-500" : "text-destructive"
                                   )}>
-                                    {wins}-{losses}{pct !== null ? ` · ${pct}%` : ""}
+                                    {actual.wins}-{actual.losses}{actual.pct !== null ? ` · ${actual.pct}%` : ""}
                                   </span>
+                                  <span className="text-[7px] text-muted-foreground tabular-nums leading-tight">proj {projected.wins}-{projected.losses}</span>
                                 </button>
                               );
                             })}

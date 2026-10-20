@@ -554,10 +554,18 @@ function SeasonRecapSection({
             <p className="text-xs text-muted-foreground">Updated as games complete</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {data.achievements.map((a, i) => (
+            {data.achievements.map((a, i) => {
+              const isTieList = a.name.includes(",");
+              return (
               <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
                 <div className="shrink-0">
-                  <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
+                  {isTieList ? (
+                    <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold">
+                      {a.name.split(",").length}
+                    </div>
+                  ) : (
+                    <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -570,7 +578,8 @@ function SeasonRecapSection({
                   <p className="text-lg font-bold text-primary">{a.value}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       )}

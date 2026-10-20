@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield, Newspaper } from "lucide-react";
+import { LogOut, LayoutDashboard, Grid, Trophy, HelpCircle, Shield, TrendingUp } from "lucide-react";
 import {
   useGetLeaderboard,
   useGetSeasonStatus,
@@ -234,13 +234,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const activeWeek = Math.min((status?.lastCompletedWeek ?? 0) + 1, 18);
-  const isInSeason = status?.mode === "in-season";
   const picksComplete = (userPicks?.length ?? 0) >= 272;
 
   const navItems = [
-    isInSeason
-      ? { href: "/recap", label: "Recap", icon: Newspaper }
-      : { href: "/picks", label: "My Picks", icon: Grid },
+    { href: "/picks", label: "My Picks", icon: Grid },
+    { href: "/recap", label: "Trends", icon: TrendingUp },
     { href: "/dashboard", label: `Week ${activeWeek}`, icon: LayoutDashboard, disabled: !picksComplete },
     { href: "/leaderboard", label: "Standings", icon: Trophy, disabled: !picksComplete },
   ];

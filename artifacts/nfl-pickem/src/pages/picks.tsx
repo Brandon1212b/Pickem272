@@ -304,11 +304,12 @@ export default function Picks() {
   }, [selectedTeamFilter, filteredMatchesByWeek]);
 
   // Team records from picks (computed here for both views)
+  // Also tracks accuracy on completed games involving each team
   const teamRecordsSorted = useMemo(() => {
     if (!matches) return [];
     // Pre-populate all 32 teams so they always appear even with no picks yet
-    const records: Record<string, { wins: number; losses: number }> = {};
-    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
+    const records: Record<string, { wins: number; losses: number; correct: number; decided: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0, correct: 0, decided: 0 };
     for (const match of matches) {
       const pick = picks?.find((p) => p.matchId === match.id);
       if (!pick?.selectedTeam) continue;
@@ -316,9 +317,53 @@ export default function Picks() {
       const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
       records[pickedTeam].wins += 1;
       records[otherTeam].losses += 1;
+
+      // Accuracy: only count completed games where a winner was decided
+      if (match.isCompleted && match.winner) {
+        for (const team of [match.homeTeam, match.awayTeam]) {
+          if (!records[team]) continue;
+          records[team].decided += 1;
+          if (pick.selectedTeam === match.winner) records[team].correct += 1;
+        }
+      }
     }
     return Object.entries(records)
-      .map(([team, rec]) => ({ team, ...rec }))
+      .map(([team, rec]) => ({
+        team,
+        ...rec,
+        pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
+      }))
+      .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+  }, [matches, picks]);
+
+  // Actual current records + your accuracy on each team's decided games
+  const actualRecordsSorted = useMemo(() => {
+    if (!matches) return [];
+    const records: Record<string, { wins: number; losses: number; correct: number; decided: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0, correct: 0, decided: 0 };
+    for (const match of matches) {
+      if (!match.isCompleted) continue;
+      // Real record only counts games with a winner
+      if (match.winner) {
+        const loser = match.winner === match.homeTeam ? match.awayTeam : match.homeTeam;
+        if (records[match.winner]) records[match.winner].wins += 1;
+        if (records[loser]) records[loser].losses += 1;
+      }
+      // Accuracy includes ties (nobody correct)
+      const pick = picks?.find((p) => p.matchId === match.id);
+      if (!pick?.selectedTeam) continue;
+      for (const team of [match.homeTeam, match.awayTeam]) {
+        if (!records[team]) continue;
+        records[team].decided += 1;
+        if (match.winner && pick.selectedTeam === match.winner) records[team].correct += 1;
+      }
+    }
+    return Object.entries(records)
+      .map(([team, rec]) => ({
+        team,
+        ...rec,
+        pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
+      }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
   }, [matches, picks]);
 
@@ -557,36 +602,47 @@ export default function Picks() {
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
-          const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+          const actualMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+          const projectedMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
           return (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Your Team Records</CardTitle>
-                <p className="text-xs text-muted-foreground">Tap a team to filter — how you have each team finishing based on your picks</p>
+            <Card className="w-full overflow-hidden">
+              <CardHeader className="pb-2 px-3 sm:px-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">Team Records</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Actual record (colored by your accuracy) · proj is your projected finish. Tap to filter.</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 px-3 sm:px-6">
                 {NFL_STRUCTURE.map(({ conf, divisions }) => (
                   <div key={conf}>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">{conf}</p>
                     <div className="space-y-1.5">
                       {divisions.map(({ div, teams }) => {
                         const divTeams = [...teams].sort((a, b) =>
-                          (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
-                          (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                          (actualMap[b]?.wins ?? 0) - (actualMap[a]?.wins ?? 0) ||
+                          (actualMap[a]?.losses ?? 0) - (actualMap[b]?.losses ?? 0)
                         );
                         return (
-                          <div key={div} className="flex items-center gap-2">
+                          <div key={div} className="flex items-center gap-2 w-full">
                             <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
-                            <div className="flex gap-1.5 flex-wrap">
+                            <div className="flex gap-1.5 flex-1 min-w-0 w-full">
                               {divTeams.map((team) => {
-                                const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                                const actual = actualMap[team] ?? { wins: 0, losses: 0, pct: null };
+                                const projected = projectedMap[team] ?? { wins: 0, losses: 0 };
                                 const isSelected = selectedTeamFilter === team;
                                 return (
                                   <button
                                     key={team}
                                     onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                     className={cn(
-                                      "flex flex-col items-center gap-0.5 p-1.5 rounded-lg border min-w-[44px] transition-all",
+                                      "flex flex-1 basis-0 min-w-0 flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all",
                                       isSelected
                                         ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                         : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
@@ -594,7 +650,13 @@ export default function Picks() {
                                   >
                                     <TeamLogo team={team} size={22} />
                                     <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
-                                    <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
+                                    <span className={cn(
+                                      "text-[10px] font-bold tabular-nums leading-tight",
+                                      actual.pct === null ? "text-muted-foreground" : actual.pct >= 70 ? "text-green-500" : actual.pct >= 50 ? "text-amber-500" : "text-destructive"
+                                    )}>
+                                      {actual.wins}-{actual.losses}{actual.pct !== null ? ` · ${actual.pct}%` : ""}
+                                    </span>
+                                    <span className="text-[8px] text-muted-foreground tabular-nums leading-tight">proj {projected.wins}-{projected.losses}</span>
                                   </button>
                                 );
                               })}
@@ -692,12 +754,22 @@ export default function Picks() {
 
       {/* Team records (if picks exist) */}
       {teamRecordsSorted.length > 0 && (() => {
-        const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+        const actualMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+        const projectedMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
         return (
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
-              <p className="text-[11px] text-muted-foreground">Tap a team to filter</p>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-1 pt-3 px-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-semibold">Team Records</CardTitle>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Actual (colored) · proj is your projected finish</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-semibold">
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
               {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -706,22 +778,23 @@ export default function Picks() {
                   <div className="space-y-1">
                     {divisions.map(({ div, teams }) => {
                       const divTeams = [...teams].sort((a, b) =>
-                        (recordMap[b]?.wins ?? 0) - (recordMap[a]?.wins ?? 0) ||
-                        (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
+                        (actualMap[b]?.wins ?? 0) - (actualMap[a]?.wins ?? 0) ||
+                        (actualMap[a]?.losses ?? 0) - (actualMap[b]?.losses ?? 0)
                       );
                       return (
-                        <div key={div} className="flex items-center gap-1.5">
+                        <div key={div} className="flex items-center gap-1.5 w-full">
                           <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-1 min-w-0 w-full">
                             {divTeams.map((team) => {
-                              const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                              const actual = actualMap[team] ?? { wins: 0, losses: 0, pct: null };
+                              const projected = projectedMap[team] ?? { wins: 0, losses: 0 };
                               const isSelected = selectedTeamFilter === team;
                               return (
                                 <button
                                   key={team}
                                   onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                   className={cn(
-                                    "flex flex-col items-center gap-0 p-1 rounded-lg border min-w-[40px] transition-all",
+                                    "flex flex-1 basis-0 min-w-0 flex-col items-center gap-0 p-1 rounded-lg border transition-all",
                                     isSelected
                                       ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                       : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
@@ -729,7 +802,13 @@ export default function Picks() {
                                 >
                                   <TeamLogo team={team} size={18} />
                                   <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
-                                  <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
+                                  <span className={cn(
+                                    "text-[9px] font-bold tabular-nums leading-tight",
+                                    actual.pct === null ? "text-muted-foreground" : actual.pct >= 70 ? "text-green-500" : actual.pct >= 50 ? "text-amber-500" : "text-destructive"
+                                  )}>
+                                    {actual.wins}-{actual.losses}{actual.pct !== null ? ` · ${actual.pct}%` : ""}
+                                  </span>
+                                  <span className="text-[7px] text-muted-foreground tabular-nums leading-tight">proj {projected.wins}-{projected.losses}</span>
                                 </button>
                               );
                             })}
@@ -1042,3 +1121,4 @@ export default function Picks() {
     </div>
   );
 }
+

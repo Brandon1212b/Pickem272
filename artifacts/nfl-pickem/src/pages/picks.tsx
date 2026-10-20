@@ -614,7 +614,7 @@ export default function Picks() {
                   <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" /><50%</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
                   </div>
                 </div>
               </CardHeader>
@@ -763,7 +763,7 @@ export default function Picks() {
                 <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-semibold">
                   <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
                   <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
-                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" /><50</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
                 </div>
               </div>
             </CardHeader>

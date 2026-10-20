@@ -643,7 +643,7 @@ export default function Picks() {
                                     {!showActualRecords && pct !== null && (
                                       <span className={cn(
                                         "text-[8px] font-bold leading-none",
-                                        pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"
+                                        pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-red-500"
                                       )}>{pct}%</span>
                                     )}
                                   </button>
@@ -794,7 +794,7 @@ export default function Picks() {
                                   {!showActualRecords && pct !== null && (
                                     <span className={cn(
                                       "text-[7px] font-bold leading-none",
-                                      pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"
+                                      pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-red-500"
                                     )}>{pct}%</span>
                                   )}
                                 </button>

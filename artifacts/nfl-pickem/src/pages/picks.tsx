@@ -125,7 +125,6 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
-  const [showActualRecords, setShowActualRecords] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page
@@ -337,21 +336,36 @@ export default function Picks() {
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
   }, [matches, picks]);
 
-  // Actual current records from completed games
+  // Actual current records + your accuracy on each team's decided games
   const actualRecordsSorted = useMemo(() => {
     if (!matches) return [];
-    const records: Record<string, { wins: number; losses: number }> = {};
-    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
+    const records: Record<string, { wins: number; losses: number; correct: number; decided: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0, correct: 0, decided: 0 };
     for (const match of matches) {
-      if (!match.isCompleted || !match.winner) continue;
-      const loser = match.winner === match.homeTeam ? match.awayTeam : match.homeTeam;
-      if (records[match.winner]) records[match.winner].wins += 1;
-      if (records[loser]) records[loser].losses += 1;
+      if (!match.isCompleted) continue;
+      // Real record only counts games with a winner
+      if (match.winner) {
+        const loser = match.winner === match.homeTeam ? match.awayTeam : match.homeTeam;
+        if (records[match.winner]) records[match.winner].wins += 1;
+        if (records[loser]) records[loser].losses += 1;
+      }
+      // Accuracy includes ties (nobody correct)
+      const pick = picks?.find((p) => p.matchId === match.id);
+      if (!pick?.selectedTeam) continue;
+      for (const team of [match.homeTeam, match.awayTeam]) {
+        if (!records[team]) continue;
+        records[team].decided += 1;
+        if (match.winner && pick.selectedTeam === match.winner) records[team].correct += 1;
+      }
     }
     return Object.entries(records)
-      .map(([team, rec]) => ({ team, ...rec }))
+      .map(([team, rec]) => ({
+        team,
+        ...rec,
+        pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
+      }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-  }, [matches]);
+  }, [matches, picks]);
 
   if (loadingStatus || loadingMatches || loadingPicks) {
     return (
@@ -588,26 +602,21 @@ export default function Picks() {
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
-          const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
-          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
+          const recordMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
           return (
-            <Card className="w-full">
-              <CardHeader className="pb-2 px-3 sm:px-6">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Your Team Records</CardTitle>
-                  <button
-                    type="button"
-                    onClick={() => setShowActualRecords((v) => !v)}
-                    className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
-                  >
-                    {showActualRecords ? "Show predicted" : "Show actual"}
-                  </button>
+            <Card className="w-full overflow-hidden">
+              <CardHeader className="pb-2 px-3 sm:px-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">Team Records</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Current records · color is your accuracy. Tap to filter.</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" /><50%</span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {showActualRecords
-                    ? "Current real records. Tap a team to filter."
-                    : "Tap a team to filter. Record is your projected finish; % is how often you got that team’s games right so far."}
-                </p>
               </CardHeader>
               <CardContent className="space-y-3 px-3 sm:px-6">
                 {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -639,13 +648,12 @@ export default function Picks() {
                                   >
                                     <TeamLogo team={team} size={22} />
                                     <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
-                                    <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
-                                    {!showActualRecords && pct !== null && (
-                                      <span className={cn(
-                                        "text-[8px] font-bold leading-none",
-                                        pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "!text-destructive"
-                                      )}>{pct}%</span>
-                                    )}
+                                    <span className={cn(
+                                      "text-[10px] font-bold tabular-nums",
+                                      pct === null ? "text-muted-foreground" : pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-destructive"
+                                    )}>
+                                      {wins}-{losses}{pct !== null ? ` · ${pct}%` : ""}
+                                    </span>
                                   </button>
                                 );
                               })}
@@ -743,22 +751,21 @@ export default function Picks() {
 
       {/* Team records (if picks exist) */}
       {teamRecordsSorted.length > 0 && (() => {
-        const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
-          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
+        const recordMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
         return (
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-4">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
-                <button
-                  type="button"
-                  onClick={() => setShowActualRecords((v) => !v)}
-                  className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
-                >
-                  {showActualRecords ? "Predicted" : "Actual"}
-                </button>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-1 pt-3 px-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-semibold">Team Records</CardTitle>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Current records · color is your accuracy</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-semibold">
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
+                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" /><50</span>
+                </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">{showActualRecords ? "Current real records" : "Tap to filter · % = correct on decided games"}</p>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
               {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -790,13 +797,12 @@ export default function Picks() {
                                 >
                                   <TeamLogo team={team} size={18} />
                                   <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
-                                  <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
-                                  {!showActualRecords && pct !== null && (
-                                    <span className={cn(
-                                      "text-[7px] font-bold leading-none",
-                                      pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "!text-destructive"
-                                    )}>{pct}%</span>
-                                  )}
+                                  <span className={cn(
+                                    "text-[9px] font-bold tabular-nums",
+                                    pct === null ? "text-muted-foreground" : pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-destructive"
+                                  )}>
+                                    {wins}-{losses}{pct !== null ? ` · ${pct}%` : ""}
+                                  </span>
                                 </button>
                               );
                             })}

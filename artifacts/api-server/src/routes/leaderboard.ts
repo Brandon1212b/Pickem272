@@ -432,6 +432,20 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const afcPct = afcResolved.length > 0 ? Math.round((afcCorrect.length / afcResolved.length) * 100) : 0;
     const nfcPct = nfcResolved.length > 0 ? Math.round((nfcCorrect.length / nfcResolved.length) * 100) : 0;
 
+    // Most correct wins called for a single team
+    const correctByTeam: Record<string, number> = {};
+    for (const p of correctPicks) {
+      correctByTeam[p.selectedTeam] = (correctByTeam[p.selectedTeam] ?? 0) + 1;
+    }
+    let bestTeam = "";
+    let bestTeamCorrect = 0;
+    for (const [team, count] of Object.entries(correctByTeam)) {
+      if (count > bestTeamCorrect) {
+        bestTeam = team;
+        bestTeamCorrect = count;
+      }
+    }
+
     return {
       userId: u.id,
       name: u.name,
@@ -440,6 +454,8 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       correctCount,
       totalResolved,
       uniqueCorrectCount,
+      bestTeam,
+      bestTeamCorrect,
       afcPct,
       afcCorrect: afcCorrect.length,
       afcResolved: afcResolved.length,
@@ -476,6 +492,20 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byUnique[0].avatar,
       value: byUnique[0].uniqueCorrectCount,
       detail: `${byUnique[0].uniqueCorrectCount} correct picks where less than half the league agreed`,
+    });
+  }
+
+  // Most correct wins called for a single team
+  const byTeam = [...userStats].filter((u) => u.bestTeamCorrect >= 2).sort((a, b) => b.bestTeamCorrect - a.bestTeamCorrect);
+  if (byTeam[0]) {
+    achievements.push({
+      type: "team-specialist",
+      label: "Team Specialist",
+      userId: byTeam[0].userId,
+      name: byTeam[0].name,
+      avatar: byTeam[0].avatar,
+      value: byTeam[0].bestTeamCorrect,
+      detail: `Correctly called ${byTeam[0].bestTeamCorrect} ${byTeam[0].bestTeam} wins — the most for any single team`,
     });
   }
 

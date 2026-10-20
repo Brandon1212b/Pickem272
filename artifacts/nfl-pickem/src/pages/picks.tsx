@@ -591,8 +591,8 @@ export default function Picks() {
           const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
           const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
           return (
-            <Card>
-              <CardHeader className="pb-2">
+            <Card className="w-full">
+              <CardHeader className="pb-2 px-3 sm:px-6">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Your Team Records</CardTitle>
                   <button
@@ -609,7 +609,7 @@ export default function Picks() {
                     : "Tap a team to filter. Record is your projected finish; % is how often you got that team’s games right so far."}
                 </p>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 px-3 sm:px-6">
                 {NFL_STRUCTURE.map(({ conf, divisions }) => (
                   <div key={conf}>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">{conf}</p>
@@ -620,9 +620,9 @@ export default function Picks() {
                           (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
                         );
                         return (
-                          <div key={div} className="flex items-center gap-2">
+                          <div key={div} className="flex items-center gap-2 w-full">
                             <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
-                            <div className="flex gap-1.5 flex-1">
+                            <div className="flex gap-1.5 flex-1 min-w-0 w-full">
                               {divTeams.map((team) => {
                                 const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                                 const isSelected = selectedTeamFilter === team;
@@ -631,7 +631,7 @@ export default function Picks() {
                                     key={team}
                                     onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                     className={cn(
-                                      "flex flex-1 flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all",
+                                      "flex flex-1 basis-0 min-w-0 flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all",
                                       isSelected
                                         ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                         : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
@@ -771,9 +771,9 @@ export default function Picks() {
                         (recordMap[a]?.losses ?? 0) - (recordMap[b]?.losses ?? 0)
                       );
                       return (
-                        <div key={div} className="flex items-center gap-1.5">
+                        <div key={div} className="flex items-center gap-1.5 w-full">
                           <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
-                          <div className="flex gap-1 flex-1">
+                          <div className="flex gap-1 flex-1 min-w-0 w-full">
                             {divTeams.map((team) => {
                               const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                               const isSelected = selectedTeamFilter === team;
@@ -782,7 +782,7 @@ export default function Picks() {
                                   key={team}
                                   onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                   className={cn(
-                                    "flex flex-1 flex-col items-center gap-0 p-1 rounded-lg border transition-all",
+                                    "flex flex-1 basis-0 min-w-0 flex-col items-center gap-0 p-1 rounded-lg border transition-all",
                                     isSelected
                                       ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                       : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"

@@ -304,11 +304,12 @@ export default function Picks() {
   }, [selectedTeamFilter, filteredMatchesByWeek]);
 
   // Team records from picks (computed here for both views)
+  // Also tracks accuracy on completed games involving each team
   const teamRecordsSorted = useMemo(() => {
     if (!matches) return [];
     // Pre-populate all 32 teams so they always appear even with no picks yet
-    const records: Record<string, { wins: number; losses: number }> = {};
-    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
+    const records: Record<string, { wins: number; losses: number; correct: number; decided: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0, correct: 0, decided: 0 };
     for (const match of matches) {
       const pick = picks?.find((p) => p.matchId === match.id);
       if (!pick?.selectedTeam) continue;
@@ -316,9 +317,22 @@ export default function Picks() {
       const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
       records[pickedTeam].wins += 1;
       records[otherTeam].losses += 1;
+
+      // Accuracy: only count completed games where a winner was decided
+      if (match.isCompleted && match.winner) {
+        for (const team of [match.homeTeam, match.awayTeam]) {
+          if (!records[team]) continue;
+          records[team].decided += 1;
+          if (pick.selectedTeam === match.winner) records[team].correct += 1;
+        }
+      }
     }
     return Object.entries(records)
-      .map(([team, rec]) => ({ team, ...rec }))
+      .map(([team, rec]) => ({
+        team,
+        ...rec,
+        pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
+      }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
   }, [matches, picks]);
 
@@ -562,7 +576,7 @@ export default function Picks() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Your Team Records</CardTitle>
-                <p className="text-xs text-muted-foreground">Tap a team to filter — how you have each team finishing based on your picks</p>
+                <p className="text-xs text-muted-foreground">Tap a team to filter. Record is your projected finish; % is how often you got that team’s games right so far.</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -579,7 +593,7 @@ export default function Picks() {
                             <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
                             <div className="flex gap-1.5 flex-wrap">
                               {divTeams.map((team) => {
-                                const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                                const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                                 const isSelected = selectedTeamFilter === team;
                                 return (
                                   <button
@@ -595,6 +609,12 @@ export default function Picks() {
                                     <TeamLogo team={team} size={22} />
                                     <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                     <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
+                                    {pct !== null && (
+                                      <span className={cn(
+                                        "text-[8px] font-bold leading-none",
+                                        pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"
+                                      )}>{pct}%</span>
+                                    )}
                                   </button>
                                 );
                               })}
@@ -697,7 +717,7 @@ export default function Picks() {
           <Card>
             <CardHeader className="pb-1 pt-3 px-4">
               <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
-              <p className="text-[11px] text-muted-foreground">Tap a team to filter</p>
+              <p className="text-[11px] text-muted-foreground">Tap to filter · % = correct on decided games</p>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
               {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -714,7 +734,7 @@ export default function Picks() {
                           <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
                           <div className="flex gap-1 flex-wrap">
                             {divTeams.map((team) => {
-                              const { wins, losses } = recordMap[team] ?? { wins: 0, losses: 0 };
+                              const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                               const isSelected = selectedTeamFilter === team;
                               return (
                                 <button
@@ -730,6 +750,12 @@ export default function Picks() {
                                   <TeamLogo team={team} size={18} />
                                   <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                   <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
+                                  {pct !== null && (
+                                    <span className={cn(
+                                      "text-[7px] font-bold leading-none",
+                                      pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"
+                                    )}>{pct}%</span>
+                                  )}
                                 </button>
                               );
                             })}
@@ -1042,3 +1068,4 @@ export default function Picks() {
     </div>
   );
 }
+

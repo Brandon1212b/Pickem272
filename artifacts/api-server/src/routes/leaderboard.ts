@@ -496,22 +496,23 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     });
   }
 
-  // Most correct wins called for a single team (all tied players listed)
+  // Most correct wins called for a single team (ties share one card)
   const byTeam = [...userStats].filter((u) => u.bestTeamCorrect >= 2).sort((a, b) => b.bestTeamCorrect - a.bestTeamCorrect);
   if (byTeam[0]) {
     const top = byTeam[0].bestTeamCorrect;
     const tied = byTeam.filter((u) => u.bestTeamCorrect === top);
-    for (const u of tied) {
-      achievements.push({
-        type: "team-specialist",
-        label: "Team Specialist",
-        userId: u.userId,
-        name: u.name,
-        avatar: u.avatar,
-        value: u.bestTeamCorrect,
-        detail: `Correctly called ${u.bestTeamCorrect} ${u.bestTeam} wins — the most for any single team`,
-      });
-    }
+    const names = tied.map((u) => `${u.name} (${u.bestTeam})`).join(", ");
+    achievements.push({
+      type: "team-specialist",
+      label: "Team Specialist",
+      userId: tied[0].userId,
+      name: names,
+      avatar: tied.length === 1 ? tied[0].avatar : null,
+      value: top,
+      detail: tied.length === 1
+        ? `Correctly called ${top} ${tied[0].bestTeam} wins — the most for any single team`
+        : `Tied for the most correct wins on a single team (${top})`,
+    });
   }
 
   // King of the AFC

@@ -388,7 +388,6 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
   const matches = await db.select().from(matchesTable);
   // Include ties (isCompleted with no winner) as decided games that nobody got right
   const completedMatches = matches.filter((m) => m.isCompleted);
-  const decidedWithWinner = completedMatches.filter((m) => m.winner);
   const completedWeeks = [...new Set(completedMatches.map((m) => m.week))].sort((a, b) => a - b);
 
   if (completedMatches.length === 0) {

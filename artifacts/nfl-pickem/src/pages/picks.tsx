@@ -125,6 +125,7 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
+  const [showActualRecords, setShowActualRecords] = useState(true);
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page
@@ -602,19 +603,29 @@ export default function Picks() {
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
-          const recordMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+          const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
+          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
           return (
             <Card className="w-full overflow-hidden">
               <CardHeader className="pb-2 px-3 sm:px-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">Team Records</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">Current records · color is your accuracy. Tap to filter.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{showActualRecords ? "Current records" : "Your projected finish"} · color is your accuracy. Tap to filter.</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowActualRecords((v) => !v)}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    >
+                      {showActualRecords ? "Show predicted" : "Show actual"}
+                    </button>
+                    <div className="flex items-center gap-2 text-[9px] font-semibold">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -751,19 +762,29 @@ export default function Picks() {
 
       {/* Team records (if picks exist) */}
       {teamRecordsSorted.length > 0 && (() => {
-        const recordMap = Object.fromEntries(actualRecordsSorted.map((r) => [r.team, r]));
+        const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
+        const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
         return (
           <Card className="overflow-hidden">
             <CardHeader className="pb-1 pt-3 px-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-sm font-semibold">Team Records</CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Current records · color is your accuracy</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{showActualRecords ? "Current records" : "Projected finish"} · color is your accuracy</p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-semibold">
-                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
-                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
-                  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowActualRecords((v) => !v)}
+                    className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  >
+                    {showActualRecords ? "Predicted" : "Actual"}
+                  </button>
+                  <div className="flex items-center gap-1.5 text-[8px] font-semibold">
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />70+</span>
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />50+</span>
+                    <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-destructive" />{'<'}50</span>
+                  </div>
                 </div>
               </div>
             </CardHeader>

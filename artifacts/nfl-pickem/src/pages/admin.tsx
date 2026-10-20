@@ -276,9 +276,10 @@ export default function Admin() {
         .filter((match) => !match.isCompleted)
         .map((match) => {
           const live = findLiveGame(result.games, match.awayTeam, match.homeTeam);
-          return live?.completed && live.winner
-            ? { matchId: match.id, winner: live.winner }
-            : null;
+          if (!live?.completed) return null;
+          // Record ties (no winner) as the "TIE" sentinel so the match is marked completed
+          const winner = live.winner ?? "TIE";
+          return { matchId: match.id, winner };
         })
         .filter((result): result is { matchId: number; winner: string } => result !== null)
         .filter((result) => !autoResultIds.current.has(result.matchId));
@@ -508,98 +509,63 @@ export default function Admin() {
           ) : users && users.length > 0 ? (
             <div className="space-y-2">
               {users.map((u) => {
-                const lastTs = lastPicks[u.id];
+                const last = lastPicks[u.id];
+                const lastLabel = last
+                  ? new Date(last).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                  : "No picks";
                 return (
-                <div key={u.id} className="flex items-center justify-between p-3 border rounded-xl bg-card">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: u.avatar ?? "#007AFF" }}
-                    >
-                      {u.name.slice(0, 2).toUpperCase()}
+                  <div key={u.id} className="flex items-center justify-between p-3 border rounded-xl bg-secondary/20">
+                    <div>
+                      <p className="font-semibold text-sm">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">Last pick: {lastLabel}</p>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{u.name}</span>
-                      {lastTs && (
-                        <span className="text-[11px] text-muted-foreground">
-                          Last updated: {new Date(lastTs).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      )}
-                    </div>
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setUserToDelete({ id: u.id, name: u.name })}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => setUserToDelete({ id: u.id, name: u.name })}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm text-center py-4">No users yet.</p>
+            <p className="text-sm text-muted-foreground">No users yet.</p>
           )}
         </CardContent>
       </Card>
 
-
-      {/* Match Results */}
+      {/* Live Scores / Match Results */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Match Results</CardTitle>
-              <CardDescription>
-                Click a team button to set them as the winner. Live scores (if available) are shown inline.
-                {espnLastFetched && (
-                  <span className="ml-1">Last updated {espnLastFetched.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}.</span>
-                )}
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={loadEspnScores} disabled={espnLoading}>
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${espnLoading ? "animate-spin" : ""}`} />
-              {espnLoading ? "Loading…" : "Refresh"}
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Tv className="w-5 h-5" />
+            Live Scores & Results
+          </CardTitle>
+          <CardDescription>
+            ESPN scores refresh automatically. Final games are recorded for you (including ties as TIE).
+            {espnLastFetched && <span className="block text-xs mt-1">Last refreshed {espnLastFetched.toLocaleTimeString()}</span>}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Accordion type="single" collapsible className="space-y-2">
-            {matchesByWeek &&
-              Object.entries(matchesByWeek).map(([week, weekMatches]) => (
-                <AccordionItem key={week} value={week} className="border rounded-xl px-2">
-                  <AccordionTrigger className="px-2 hover:no-underline font-semibold">
+          {espnError && <p className="text-sm text-destructive mb-3">{espnError}</p>}
+          {espnLoading && espnGames.length === 0 ? (
+            <Skeleton className="h-40 w-full" />
+          ) : matchesByWeek ? (
+            <Accordion type="multiple" className="space-y-2">
+              {Object.entries(matchesByWeek).map(([week, weekMatches]) => (
+                <AccordionItem key={week} value={week} className="border rounded-xl px-3">
+                  <AccordionTrigger className="text-sm font-semibold">
                     Week {week}
-                    <span className="ml-auto mr-3 text-xs text-muted-foreground font-normal">
-                      {weekMatches.filter((m) => m.isCompleted).length}/{weekMatches.length} done
-                    </span>
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      {weekMatches?.filter(m => m.isCompleted).length ?? 0}/{weekMatches?.length ?? 0} done
+                    </Badge>
                   </AccordionTrigger>
-                  <AccordionContent className="space-y-2 p-2">
-                    {/* Reset week button */}
-                    {weekMatches.some((m) => m.isCompleted) && (
-                      <div className="flex justify-end mb-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-1.5"
-                          onClick={() => setWeekToReset(parseInt(week))}
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          Reset Week {week} Results
-                        </Button>
-                      </div>
-                    )}
-
-                    {weekMatches.map((match) => {
+                  <AccordionContent className="space-y-2 pb-3">
+                    {weekMatches?.map((match) => {
                       const live = findLiveGame(espnGames, match.awayTeam, match.homeTeam);
-                      const hasLive = live !== null;
-                      const awayWon = match.winner === match.awayTeam;
-                      const homeWon = match.winner === match.homeTeam;
-
+                      const awayWon = match.isCompleted && match.winner === match.awayTeam;
+                      const homeWon = match.isCompleted && match.winner === match.homeTeam;
+                      const isTie = match.isCompleted && !match.winner;
                       return (
-                        <div key={match.id} className="flex items-center gap-2 p-2 border rounded-xl bg-card text-sm">
+                        <div key={match.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30 text-sm">
                           <button
                             onClick={() => handleSetWinner(match.id, match.awayTeam)}
                             className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-all font-semibold flex-1 min-w-0
@@ -612,21 +578,20 @@ export default function Admin() {
                           >
                             <TeamLogo team={match.awayTeam} size={18} className="shrink-0" />
                             <span className="truncate text-xs">{match.awayTeam}</span>
-                            {awayWon && <span className="shrink-0">✓</span>}
+                            {live && <span className="text-xs opacity-70">{live.awayScore}</span>}
                           </button>
-                        
-                          <div className="flex items-center gap-1 shrink-0">
-                            {hasLive ? (
-                              <>
-                                <span className="font-bold tabular-nums">{live.awayScore}</span>
-                                <span className="text-muted-foreground">–</span>
-                                <span className="font-bold tabular-nums">{live.homeScore}</span>
-                              </>
-                            ) : (
-                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{match.gameTime ?? "—"}</span>
+                          <div className="flex flex-col items-center shrink-0 min-w-[60px]">
+                            {isTie && <Badge variant="secondary" className="text-[10px]">TIE</Badge>}
+                            {live && <span className="text-[10px] text-muted-foreground">{live.status}</span>}
+                            {!match.isCompleted && (
+                              <button
+                                onClick={() => handleSetWinner(match.id, "TIE")}
+                                className="text-[10px] text-primary underline mt-0.5"
+                              >
+                                Mark as tie
+                              </button>
                             )}
                           </div>
-                        
                           <button
                             onClick={() => handleSetWinner(match.id, match.homeTeam)}
                             className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-all font-semibold flex-1 min-w-0 justify-end
@@ -637,73 +602,55 @@ export default function Admin() {
                                 : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-primary/10 cursor-pointer"
                               }`}
                           >
-                            {homeWon && <span className="shrink-0">✓</span>}
+                            {live && <span className="text-xs opacity-70">{live.homeScore}</span>}
                             <span className="truncate text-xs">{match.homeTeam}</span>
                             <TeamLogo team={match.homeTeam} size={18} className="shrink-0" />
                           </button>
-                        
-                          {hasLive && (
-                            <Badge
-                              variant={live.completed ? "secondary" : "outline"}
-                              className={`text-[10px] shrink-0 ${live.status.startsWith("Q") ? "bg-green-500/15 text-green-400 border-green-500/30" : ""}`}
-                            >
-                              {live.status}
-                            </Badge>
-                          )}
-                          {match.isCompleted && !hasLive && (
-                            <Badge variant="secondary" className="text-[10px] shrink-0">Final</Badge>
-                          )}
                         </div>
                       );
                     })}
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setWeekToReset(Number(week))}>
+                      <RotateCcw className="w-3 h-3 mr-1" /> Reset week {week}
+                    </Button>
                   </AccordionContent>
                 </AccordionItem>
               ))}
-          </Accordion>
+            </Accordion>
+          ) : null}
         </CardContent>
       </Card>
 
-      {/* Delete user confirmation */}
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+      {/* Reset week dialog */}
+      <AlertDialog open={weekToReset !== null} onOpenChange={() => setWeekToReset(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {userToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>Reset Week {weekToReset} results?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes <strong>{userToDelete?.name}</strong> and all their picks from the league.
-              This cannot be undone.
+              This clears all winners and points for the week. The week will no longer count as completed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteUser}
-              disabled={deletingUser}
-            >
-              {deletingUser ? "Deleting…" : "Yes, delete"}
+            <AlertDialogAction onClick={handleResetWeek} disabled={resettingWeek}>
+              {resettingWeek ? "Resetting…" : "Yes, reset"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset week confirmation */}
-      <AlertDialog open={weekToReset !== null} onOpenChange={(open) => !open && setWeekToReset(null)}>
+      {/* Delete user dialog */}
+      <AlertDialog open={userToDelete !== null} onOpenChange={() => setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset Week {weekToReset} results?</AlertDialogTitle>
+            <AlertDialogTitle>Remove {userToDelete?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This clears all winners and points for Week {weekToReset}. All pick scores for that week will be set to 0.
-              You'll need to re-enter the results. This cannot be undone.
+              This deletes the user and all of their picks. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleResetWeek}
-              disabled={resettingWeek}
-            >
-              {resettingWeek ? "Resetting…" : "Yes, reset"}
+            <AlertDialogAction onClick={handleDeleteUser} disabled={deletingUser} className="bg-destructive text-destructive-foreground">
+              {deletingUser ? "Removing…" : "Yes, remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

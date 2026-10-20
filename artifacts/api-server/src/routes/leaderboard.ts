@@ -379,6 +379,9 @@ router.get("/leaderboard/weekly-recap", async (req, res) => {
   });
 });
 
+const AFC_TEAMS = new Set(["BUF","MIA","NE","NYJ","BAL","CIN","CLE","PIT","HOU","IND","JAX","TEN","DEN","KC","LAC","LV"]);
+const NFC_TEAMS = new Set(["DAL","NYG","PHI","WAS","CHI","DET","GB","MIN","ATL","CAR","NO","TB","ARI","LAR","SF","SEA"]);
+
 router.get("/leaderboard/season-recap", async (_req, res) => {
   const users = await db.select().from(usersTable);
   const picks = await db.select().from(picksTable);
@@ -403,31 +406,31 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const correctCount = correctPicks.length;
     const correctPct = totalResolved > 0 ? Math.round((correctCount / totalResolved) * 100) : 0;
 
-    // Longest correct streak
-    const allResolvedSorted = resolvedPicks
-      .map((p) => {
-        const m = completedMatches.find((m) => m.id === p.matchId);
-        return { pick: p, match: m!, correct: !!m && p.selectedTeam === m.winner };
-      })
-      .filter((x) => x.match)
-      .sort((a, b) => a.match.week - b.match.week);
-
-    let maxStreak = 0;
-    let currentStreak = 0;
-    for (const r of allResolvedSorted) {
-      if (r.correct) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
-      } else {
-        currentStreak = 0;
-      }
-    }
-
     // Count "unique" correct picks: correct picks where < half the league also got right
     const uniqueCorrectCount = correctPicks.filter((p) => {
       const totalPickers = picks.filter((q) => q.matchId === p.matchId && q.selectedTeam === p.selectedTeam).length;
       return totalPickers < Math.ceil(users.length / 2);
     }).length;
+
+    // Conference accuracy: games involving at least one team from that conference
+    const afcResolved = resolvedPicks.filter((p) => {
+      const m = completedMatches.find((m) => m.id === p.matchId);
+      return m && (AFC_TEAMS.has(m.homeTeam) || AFC_TEAMS.has(m.awayTeam));
+    });
+    const afcCorrect = afcResolved.filter((p) => {
+      const m = completedMatches.find((m) => m.id === p.matchId);
+      return m && p.selectedTeam === m.winner;
+    });
+    const nfcResolved = resolvedPicks.filter((p) => {
+      const m = completedMatches.find((m) => m.id === p.matchId);
+      return m && (NFC_TEAMS.has(m.homeTeam) || NFC_TEAMS.has(m.awayTeam));
+    });
+    const nfcCorrect = nfcResolved.filter((p) => {
+      const m = completedMatches.find((m) => m.id === p.matchId);
+      return m && p.selectedTeam === m.winner;
+    });
+    const afcPct = afcResolved.length > 0 ? Math.round((afcCorrect.length / afcResolved.length) * 100) : 0;
+    const nfcPct = nfcResolved.length > 0 ? Math.round((nfcCorrect.length / nfcResolved.length) * 100) : 0;
 
     return {
       userId: u.id,
@@ -436,8 +439,13 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       correctPct,
       correctCount,
       totalResolved,
-      maxStreak,
       uniqueCorrectCount,
+      afcPct,
+      afcCorrect: afcCorrect.length,
+      afcResolved: afcResolved.length,
+      nfcPct,
+      nfcCorrect: nfcCorrect.length,
+      nfcResolved: nfcResolved.length,
     };
   }).filter((u) => u.totalResolved > 0);
 
@@ -457,20 +465,6 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     });
   }
 
-  // Longest correct streak
-  const byStreak = [...userStats].sort((a, b) => b.maxStreak - a.maxStreak);
-  if (byStreak[0] && byStreak[0].maxStreak >= 3) {
-    achievements.push({
-      type: "longest-streak",
-      label: "Hot Streak",
-      userId: byStreak[0].userId,
-      name: byStreak[0].name,
-      avatar: byStreak[0].avatar,
-      value: byStreak[0].maxStreak,
-      detail: `${byStreak[0].maxStreak} consecutive correct picks — the longest streak in the league`,
-    });
-  }
-
   // Most unique correct picks
   const byUnique = [...userStats].sort((a, b) => b.uniqueCorrectCount - a.uniqueCorrectCount);
   if (byUnique[0] && byUnique[0].uniqueCorrectCount > 0) {
@@ -482,6 +476,34 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byUnique[0].avatar,
       value: byUnique[0].uniqueCorrectCount,
       detail: `${byUnique[0].uniqueCorrectCount} correct picks where less than half the league agreed`,
+    });
+  }
+
+  // King of the AFC
+  const byAfc = [...userStats].filter((u) => u.afcResolved >= 3).sort((a, b) => b.afcPct - a.afcPct || b.afcCorrect - a.afcCorrect);
+  if (byAfc[0]) {
+    achievements.push({
+      type: "king-of-afc",
+      label: "King of the AFC",
+      userId: byAfc[0].userId,
+      name: byAfc[0].name,
+      avatar: byAfc[0].avatar,
+      value: byAfc[0].afcPct,
+      detail: `${byAfc[0].afcCorrect}/${byAfc[0].afcResolved} correct on AFC games — ${byAfc[0].afcPct}%`,
+    });
+  }
+
+  // King of the NFC
+  const byNfc = [...userStats].filter((u) => u.nfcResolved >= 3).sort((a, b) => b.nfcPct - a.nfcPct || b.nfcCorrect - a.nfcCorrect);
+  if (byNfc[0]) {
+    achievements.push({
+      type: "king-of-nfc",
+      label: "King of the NFC",
+      userId: byNfc[0].userId,
+      name: byNfc[0].name,
+      avatar: byNfc[0].avatar,
+      value: byNfc[0].nfcPct,
+      detail: `${byNfc[0].nfcCorrect}/${byNfc[0].nfcResolved} correct on NFC games — ${byNfc[0].nfcPct}%`,
     });
   }
 

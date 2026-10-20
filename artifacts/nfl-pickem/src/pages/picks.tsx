@@ -608,14 +608,29 @@ export default function Picks() {
             <Card className="w-full overflow-hidden">
               <CardHeader className="pb-2 px-3 sm:px-5">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <CardTitle className="text-base">Team Records</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">Actual record (colored by your accuracy) · proj is your projected finish. Tap to filter.</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Tap a team to filter. See the key for what each field means.</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 text-[9px] font-semibold">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />70%+</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />50%+</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" />{'<'}50%</span>
+                  {/* Example key */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg border bg-secondary/30 border-border/50 min-w-[52px]">
+                      <img
+                        src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"
+                        alt="NFL"
+                        width={22}
+                        height={22}
+                        className="object-contain"
+                      />
+                      <span className="text-[8px] font-bold uppercase text-muted-foreground">NFL</span>
+                      <span className="text-[10px] font-bold text-green-500 tabular-nums leading-tight">7-2 · 78%</span>
+                      <span className="text-[8px] text-muted-foreground tabular-nums leading-tight">proj 12-5</span>
+                    </div>
+                    <div className="text-[8px] leading-tight text-muted-foreground space-y-1 hidden sm:block">
+                      <div className="flex items-center gap-1"><span className="text-green-500 font-bold">7-2</span> actual record</div>
+                      <div className="flex items-center gap-1"><span className="text-green-500 font-bold">78%</span> % you have right so far</div>
+                      <div className="flex items-center gap-1"><span>proj 12-5</span> what you projected</div>
+                    </div>
                   </div>
                 </div>
               </CardHeader>

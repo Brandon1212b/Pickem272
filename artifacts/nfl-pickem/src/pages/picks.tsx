@@ -622,7 +622,7 @@ export default function Picks() {
                         return (
                           <div key={div} className="flex items-center gap-2">
                             <span className="text-[9px] text-muted-foreground w-7 shrink-0 font-medium">{div}</span>
-                            <div className="flex gap-1.5 flex-wrap">
+                            <div className="flex gap-1.5 flex-1">
                               {divTeams.map((team) => {
                                 const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                                 const isSelected = selectedTeamFilter === team;
@@ -631,7 +631,7 @@ export default function Picks() {
                                     key={team}
                                     onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                     className={cn(
-                                      "flex flex-col items-center gap-0.5 p-1.5 rounded-lg border min-w-[44px] transition-all",
+                                      "flex flex-1 flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all",
                                       isSelected
                                         ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                         : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"
@@ -773,7 +773,7 @@ export default function Picks() {
                       return (
                         <div key={div} className="flex items-center gap-1.5">
                           <span className="text-[8px] text-muted-foreground w-6 shrink-0 font-medium">{div}</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-1">
                             {divTeams.map((team) => {
                               const { wins, losses, pct } = recordMap[team] ?? { wins: 0, losses: 0, pct: null };
                               const isSelected = selectedTeamFilter === team;
@@ -782,7 +782,7 @@ export default function Picks() {
                                   key={team}
                                   onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
                                   className={cn(
-                                    "flex flex-col items-center gap-0 p-1 rounded-lg border min-w-[40px] transition-all",
+                                    "flex flex-1 flex-col items-center gap-0 p-1 rounded-lg border transition-all",
                                     isSelected
                                       ? "bg-primary/15 border-primary ring-1 ring-primary/40"
                                       : "bg-secondary/30 border-border/50 hover:bg-secondary/60 hover:border-border"

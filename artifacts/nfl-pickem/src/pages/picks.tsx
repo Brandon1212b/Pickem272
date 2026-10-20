@@ -125,6 +125,7 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
+  const [showActualRecords, setShowActualRecords] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page
@@ -335,6 +336,22 @@ export default function Picks() {
       }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
   }, [matches, picks]);
+
+  // Actual current records from completed games
+  const actualRecordsSorted = useMemo(() => {
+    if (!matches) return [];
+    const records: Record<string, { wins: number; losses: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
+    for (const match of matches) {
+      if (!match.isCompleted || !match.winner) continue;
+      const loser = match.winner === match.homeTeam ? match.awayTeam : match.homeTeam;
+      if (records[match.winner]) records[match.winner].wins += 1;
+      if (records[loser]) records[loser].losses += 1;
+    }
+    return Object.entries(records)
+      .map(([team, rec]) => ({ team, ...rec }))
+      .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+  }, [matches]);
 
   if (loadingStatus || loadingMatches || loadingPicks) {
     return (
@@ -571,12 +588,26 @@ export default function Picks() {
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
-          const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+          const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
+          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
           return (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Your Team Records</CardTitle>
-                <p className="text-xs text-muted-foreground">Tap a team to filter. Record is your projected finish; % is how often you got that team’s games right so far.</p>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Your Team Records</CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setShowActualRecords((v) => !v)}
+                    className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  >
+                    {showActualRecords ? "Show predicted" : "Show actual"}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {showActualRecords
+                    ? "Current real records. Tap a team to filter."
+                    : "Tap a team to filter. Record is your projected finish; % is how often you got that team’s games right so far."}
+                </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -609,7 +640,7 @@ export default function Picks() {
                                     <TeamLogo team={team} size={22} />
                                     <span className={cn("text-[8px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                     <span className="text-[10px] font-bold text-foreground">{wins}-{losses}</span>
-                                    {pct !== null && (
+                                    {!showActualRecords && pct !== null && (
                                       <span className={cn(
                                         "text-[8px] font-bold leading-none",
                                         pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"
@@ -712,12 +743,22 @@ export default function Picks() {
 
       {/* Team records (if picks exist) */}
       {teamRecordsSorted.length > 0 && (() => {
-        const recordMap = Object.fromEntries(teamRecordsSorted.map((r) => [r.team, r]));
+        const source = showActualRecords ? actualRecordsSorted : teamRecordsSorted;
+          const recordMap = Object.fromEntries(source.map((r) => [r.team, r]));
         return (
           <Card>
             <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
-              <p className="text-[11px] text-muted-foreground">Tap to filter · % = correct on decided games</p>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">Your Team Records</CardTitle>
+                <button
+                  type="button"
+                  onClick={() => setShowActualRecords((v) => !v)}
+                  className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-muted-foreground hover:bg-secondary/80"
+                >
+                  {showActualRecords ? "Predicted" : "Actual"}
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{showActualRecords ? "Current real records" : "Tap to filter · % = correct on decided games"}</p>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
               {NFL_STRUCTURE.map(({ conf, divisions }) => (
@@ -750,7 +791,7 @@ export default function Picks() {
                                   <TeamLogo team={team} size={18} />
                                   <span className={cn("text-[7px] font-bold uppercase", isSelected ? "text-primary" : "text-muted-foreground")}>{team}</span>
                                   <span className="text-[9px] font-bold text-foreground">{wins}-{losses}</span>
-                                  {pct !== null && (
+                                  {!showActualRecords && pct !== null && (
                                     <span className={cn(
                                       "text-[7px] font-bold leading-none",
                                       pct >= 70 ? "text-green-500" : pct >= 50 ? "text-amber-500" : "text-muted-foreground"

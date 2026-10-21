@@ -7,9 +7,11 @@ import {
   useSavePicks,
   useAutofillPicks,
   useGetLeaderboard,
+  useGetLeaderboardTrends,
   getGetUserPicksQueryKey,
   getListMatchesQueryKey,
   getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
 } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Save, Shuffle, Wand2, Star, RotateCcw, CheckCircle2, Pencil, Plane, Clock, ChevronDown } from "lucide-react";
 import {
   Select,
@@ -116,7 +119,9 @@ export default function Picks() {
     const uid = params.get("user");
     return uid ? Number(uid) : null;
   });
+  const [leftPlayerId, setLeftPlayerId] = useState<number | null>(null); // null means current user
   const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
+  const [showH2HShare, setShowH2HShare] = useState(false);
 
   const { data: status, isLoading: loadingStatus } = useGetSeasonStatus();
   const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
@@ -132,10 +137,19 @@ export default function Picks() {
   const { data: leaderboard } = useGetLeaderboard({
     query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 60_000 },
   });
+  const { data: trends } = useGetLeaderboardTrends({
+    query: { queryKey: getGetLeaderboardTrendsQueryKey(), refetchInterval: 60_000 },
+  });
   const { data: viewingPicks } = useGetUserPicks(viewingUserId ?? 0, {
     query: {
       enabled: !!viewingUserId && viewingUserId !== user?.id,
       queryKey: getGetUserPicksQueryKey(viewingUserId ?? 0),
+    },
+  });
+  const { data: leftPicks } = useGetUserPicks(leftPlayerId ?? 0, {
+    query: {
+      enabled: !!leftPlayerId && leftPlayerId !== user?.id,
+      queryKey: getGetUserPicksQueryKey(leftPlayerId ?? 0),
     },
   });
   const [, setLocation] = useLocation();
@@ -171,19 +185,157 @@ export default function Picks() {
     }
     return { correct, wrong, total: correct + wrong };
   };
-  const myRecord = computeRecord(picks);
+  const leftUser = leftPlayerId ? leaderboard?.find((e) => e.userId === leftPlayerId) : null;
+  const leftEffectivePicks = leftPlayerId && leftPlayerId !== user?.id ? leftPicks : picks;
+  const myRecord = computeRecord(leftEffectivePicks);
   const theirRecord = isComparing ? computeRecord(viewingPicks) : null;
 
   const differCount = useMemo(() => {
-    if (!isComparing || !picks || !viewingPicks) return 0;
+    if (!isComparing || !leftEffectivePicks || !viewingPicks) return 0;
     let n = 0;
     for (const m of matches ?? []) {
-      const mine = picks.find((p) => p.matchId === m.id)?.selectedTeam;
+      const mine = leftEffectivePicks.find((p) => p.matchId === m.id)?.selectedTeam;
       const theirs = viewingPicks.find((p) => p.matchId === m.id)?.selectedTeam;
       if (mine && theirs && mine !== theirs) n++;
     }
     return n;
-  }, [isComparing, picks, viewingPicks, matches]);
+  }, [isComparing, leftEffectivePicks, viewingPicks, matches]);
+
+  // Weekly points for H2H graphic (only completed weeks)
+  const weeklyPointsH2H = useMemo(() => {
+    if (!isComparing || !matches || !leftEffectivePicks || !viewingPicks) return [];
+    const weeks = [...new Set(matches.filter(m => m.isCompleted).map(m => m.week))].sort((a, b) => a - b);
+    return weeks.map(week => {
+      const weekMatches = matches.filter(m => m.week === week && m.isCompleted);
+      const myPts = weekMatches.reduce((sum, m) => {
+        const p = leftEffectivePicks.find(pp => pp.matchId === m.id);
+        return sum + (p?.pointsEarned ?? 0);
+      }, 0);
+      const theirPts = weekMatches.reduce((sum, m) => {
+        const p = viewingPicks.find(pp => pp.matchId === m.id);
+        return sum + (p?.pointsEarned ?? 0);
+      }, 0);
+      return { week, myPts, theirPts };
+    });
+  }, [isComparing, matches, leftEffectivePicks, viewingPicks]);
+
+  // Projected top/bottom 4 for both players
+  const computeProjected = (pickList: typeof picks) => {
+    if (!matches || !pickList) return { top4: [], bottom4: [] };
+    const records: Record<string, { wins: number; losses: number }> = {};
+    for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0 };
+    for (const match of matches) {
+      const pick = pickList.find((p) => p.matchId === match.id);
+      if (!pick?.selectedTeam) continue;
+      const pickedTeam = pick.selectedTeam;
+      const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
+      records[pickedTeam].wins += 1;
+      records[otherTeam].losses += 1;
+    }
+    const sorted = Object.entries(records)
+      .map(([team, rec]) => ({ team, ...rec }))
+      .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+    return {
+      top4: sorted.slice(0, 4),
+      bottom4: sorted.slice(-4).reverse(),
+    };
+  };
+  const myProjected = useMemo(() => computeProjected(leftEffectivePicks), [matches, leftEffectivePicks]);
+  const theirProjected = useMemo(() => computeProjected(viewingPicks), [matches, viewingPicks]);
+
+  // Extra H2H stats for the snapshot
+  const h2hStats = useMemo(() => {
+    if (!isComparing || weeklyPointsH2H.length === 0) return null;
+    let myWeekWins = 0;
+    let theirWeekWins = 0;
+    let ties = 0;
+    let myTotal = 0;
+    let theirTotal = 0;
+    let biggestGap = { week: 0, diff: 0, winner: "" as "me" | "them" | "" };
+
+    for (const w of weeklyPointsH2H) {
+      myTotal += w.myPts;
+      theirTotal += w.theirPts;
+      if (w.myPts > w.theirPts) myWeekWins++;
+      else if (w.theirPts > w.myPts) theirWeekWins++;
+      else ties++;
+
+      const gap = Math.abs(w.myPts - w.theirPts);
+      if (gap > biggestGap.diff) {
+        biggestGap = {
+          week: w.week,
+          diff: gap,
+          winner: w.myPts > w.theirPts ? "me" : "them",
+        };
+      }
+    }
+
+    const myRank = leaderboard?.find((e) => e.userId === (leftPlayerId ?? user?.id))?.rank;
+    const theirRank = viewingUser?.rank;
+
+    // Recent rank change from trends (positive = improved)
+    let myRankChange = 0;
+    let theirRankChange = 0;
+    if (trends && trends.length >= 2 && trends[0].weeklyPoints.length >= 2) {
+      const numWeeks = trends[0].weeklyPoints.length;
+      const rankAt = (weekIdx: number) =>
+        [...trends]
+          .sort((a, b) => (b.weeklyPoints[weekIdx] ?? 0) - (a.weeklyPoints[weekIdx] ?? 0))
+          .map((u, i) => ({ userId: u.userId, rank: i + 1 }));
+      const prevRanks = rankAt(numWeeks - 2);
+      const currRanks = rankAt(numWeeks - 1);
+      const prevMy = prevRanks.find((r) => r.userId === user?.id)?.rank;
+      const currMy = currRanks.find((r) => r.userId === user?.id)?.rank;
+      const prevTheir = prevRanks.find((r) => r.userId === viewingUser?.userId)?.rank;
+      const currTheir = currRanks.find((r) => r.userId === viewingUser?.userId)?.rank;
+      if (prevMy && currMy) myRankChange = prevMy - currMy;
+      if (prevTheir && currTheir) theirRankChange = prevTheir - currTheir;
+    }
+    const pointDiff = myTotal - theirTotal;
+
+    const myTopTeams = new Set(myProjected.top4.map((t) => t.team));
+    const theirTopTeams = new Set(theirProjected.top4.map((t) => t.team));
+    const myBotTeams = new Set(myProjected.bottom4.map((t) => t.team));
+    const theirBotTeams = new Set(theirProjected.bottom4.map((t) => t.team));
+
+    const overlappingTop = [...myTopTeams].filter((t) => theirTopTeams.has(t));
+    const overlappingBottom = [...myBotTeams].filter((t) => theirBotTeams.has(t));
+
+    const completedWeeks = weeklyPointsH2H.length;
+    const totalWeeks = 18;
+
+    const myName = (user?.name || "You").split(" ")[0];
+    const theirName = (viewingUser?.name || "Them").split(" ")[0];
+
+    // One-line story
+    let story = "";
+    if (pointDiff > 0) {
+      story = `${myName} leads by ${pointDiff} pts and is ${myWeekWins}-${theirWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    } else if (pointDiff < 0) {
+      story = `${theirName} leads by ${-pointDiff} pts and is ${theirWeekWins}-${myWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    } else {
+      story = `Tied on points · ${myWeekWins}-${theirWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    }
+
+    return {
+      myWeekWins,
+      theirWeekWins,
+      ties,
+      myTotal,
+      theirTotal,
+      pointDiff,
+      biggestGap,
+      myRank,
+      theirRank,
+      myRankChange,
+      theirRankChange,
+      overlappingTop,
+      overlappingBottom,
+      completedWeeks,
+      totalWeeks,
+      story,
+    };
+  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, leftPlayerId, viewingUser, myProjected, theirProjected, trends]);
 
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});
@@ -195,8 +347,12 @@ export default function Picks() {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
-  // Tutorial popup — shows on first visit to picks page
-  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem("picks_tutorial_seen"));
+  // Tutorial popup — only on first visit and only while season is still pre-season
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (localStorage.getItem("picks_tutorial_seen")) return false;
+    return true;
+  });
 
   // Lock state: show locked view when server has all picks AND user hasn't explicitly unlocked
   const picksUnlockedKey = `picks_unlocked_${user?.id}`;
@@ -539,8 +695,10 @@ export default function Picks() {
   );
 
   // ── TUTORIAL DIALOG ───────────────────────────────────────────────────────────
+  // Never show once the season is underway
+  const shouldShowTutorial = showTutorial && status?.mode !== "in-season" && (status?.lastCompletedWeek ?? 0) === 0;
   const TutorialDialog = (
-    <AlertDialog open={showTutorial} onOpenChange={(open) => { if (!open) dismissTutorial(); }}>
+    <AlertDialog open={shouldShowTutorial} onOpenChange={(open) => { if (!open) dismissTutorial(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>🏈 Before You Start Picking</AlertDialogTitle>
@@ -705,7 +863,7 @@ export default function Picks() {
                 value={leaderboard?.some(e => e.userId === viewingUserId) ? String(viewingUserId) : "me"}
                 onValueChange={(v) => setViewingUserId(v === "me" ? null : Number(v))}
               >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectTrigger className="w-[160px] h-8 text-xs ring-2 ring-primary/40 shadow-[0_0_12px_rgba(59,130,246,0.4)]">
                   <SelectValue placeholder="Compare with..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -717,19 +875,14 @@ export default function Picks() {
                   ))}
                 </SelectContent>
               </Select>
-              {isComparing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs px-2"
-                  onClick={() => {
-                    const url = window.location.origin + "/picks?user=" + viewingUserId;
-                    navigator.clipboard.writeText(url).then(() => toast.success("Link copied!"));
-                  }}
-                >
-                  Share
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs px-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                onClick={() => setShowH2HShare(true)}
+              >
+                Click for H2H
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               {countdown && status?.mode === "pre-season" && (
@@ -905,9 +1058,243 @@ export default function Picks() {
           )
         )}
         </div>
-      </div>
-    );
-  }
+
+      {/* Head-to-Head Share Graphic (available in locked view) */}
+      <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
+          <div className="p-5 space-y-4" id="h2h-share-graphic">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-black tracking-tight">
+                <Select
+                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-muted-foreground font-normal"> vs </span>
+                <Select
+                  value={viewingUserId ? String(viewingUserId) : ""}
+                  onValueChange={(v) => setViewingUserId(Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </h2>
+              {h2hStats && (
+                <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
+              )}
+            </div>
+
+            {/* Season progress with weekly milestones */}
+            {h2hStats && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                  <span>Season progress</span>
+                  <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
+                </div>
+                <div className="relative">
+                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-muted rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex justify-between items-center px-0.5">
+                    {Array.from({ length: h2hStats.totalWeeks }, (_, i) => {
+                      const week = i + 1;
+                      const w = weeklyPointsH2H.find((x) => x.week === week);
+                      const isFuture = !w;
+                      const myInitial = (leftUser?.name || user?.name || "Y")[0].toUpperCase();
+                      const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
+                      let content = String(week);
+                      let bg = "bg-muted text-muted-foreground";
+                      let textColor = "";
+                      if (w) {
+                        if (w.myPts > w.theirPts) {
+                          content = myInitial;
+                          bg = "bg-blue-500 text-white";
+                        } else if (w.theirPts > w.myPts) {
+                          content = theirInitial;
+                          bg = "bg-orange-500 text-white";
+                        } else {
+                          content = "=";
+                          bg = "bg-amber-400 text-black";
+                        }
+                      }
+                      return (
+                        <div
+                          key={week}
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold border border-background ${bg} ${isFuture ? "opacity-50" : ""}`}
+                          title={isFuture ? `Week ${week}` : `Week ${week}: ${w!.myPts}-${w!.theirPts}`}
+                        >
+                          {content}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Records + Rank */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
+                  Rank {h2hStats?.myRank ?? "—"}
+                  {h2hStats && h2hStats.myRankChange !== 0 && (
+                    <span className={h2hStats.myRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.myRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.myRankChange)}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
+                  Rank {h2hStats?.theirRank ?? "—"}
+                  {h2hStats && h2hStats.theirRankChange !== 0 && (
+                    <span className={h2hStats.theirRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.theirRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.theirRankChange)}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Biggest gap */}
+            {h2hStats && h2hStats.biggestGap.diff > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Biggest week gap: <span className="font-semibold text-foreground">Week {h2hStats.biggestGap.week}</span> by {h2hStats.biggestGap.diff} pts
+                ({h2hStats.biggestGap.winner === "me" ? (user?.name || "You").split(" ")[0] : (viewingUser?.name || "Them").split(" ")[0]})
+              </p>
+            )}
+
+            {/* Weekly points bar chart */}
+            {weeklyPointsH2H.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="w-8 shrink-0" />
+                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
+                  <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
+                  <span className="w-12" />
+                </div>
+                {weeklyPointsH2H.map((w) => {
+                  const max = Math.max(w.myPts, w.theirPts, 1);
+                  const tied = w.myPts === w.theirPts;
+                  const myWins = w.myPts > w.theirPts || tied;
+                  const theirWins = w.theirPts > w.myPts || tied;
+                  return (
+                    <div key={w.week} className="flex items-center gap-2 text-xs">
+                      <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
+                      <div className="flex-1 flex items-center gap-1">
+                        <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
+                          <div
+                            className={`h-full rounded-r transition-all duration-700 ease-out ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
+                            style={{ width: `${(w.myPts / max) * 100}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
+                            {w.myPts}
+                          </span>
+                        </div>
+                        <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
+                          <div
+                            className={`h-full rounded-l transition-all duration-700 ease-out ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
+                            style={{ width: `${(w.theirPts / max) * 100}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
+                            {w.theirPts}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Projected teams — all in one row */}
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projected Finish</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
+                  {myProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
+                  {myProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
+                  {theirProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
+                  {theirProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {differCount > 0 && (
+              <p className="text-center text-xs text-muted-foreground pt-1">
+                Differ on {differCount} of {matches?.length ?? 272} games
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
   // ── EDITING VIEW ──────────────────────────────────────────────────────────────
   return (
@@ -1320,6 +1707,240 @@ export default function Picks() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Head-to-Head Share Graphic */}
+      <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
+          <div className="p-5 space-y-4" id="h2h-share-graphic">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-black tracking-tight">
+                <Select
+                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-muted-foreground font-normal"> vs </span>
+                <Select
+                  value={viewingUserId ? String(viewingUserId) : ""}
+                  onValueChange={(v) => setViewingUserId(Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </h2>
+              {h2hStats && (
+                <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
+              )}
+            </div>
+
+            {/* Season progress with weekly milestones */}
+            {h2hStats && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                  <span>Season progress</span>
+                  <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
+                </div>
+                <div className="relative">
+                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-muted rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex justify-between items-center px-0.5">
+                    {Array.from({ length: h2hStats.totalWeeks }, (_, i) => {
+                      const week = i + 1;
+                      const w = weeklyPointsH2H.find((x) => x.week === week);
+                      const isFuture = !w;
+                      const myInitial = (leftUser?.name || user?.name || "Y")[0].toUpperCase();
+                      const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
+                      let content = String(week);
+                      let bg = "bg-muted text-muted-foreground";
+                      let textColor = "";
+                      if (w) {
+                        if (w.myPts > w.theirPts) {
+                          content = myInitial;
+                          bg = "bg-blue-500 text-white";
+                        } else if (w.theirPts > w.myPts) {
+                          content = theirInitial;
+                          bg = "bg-orange-500 text-white";
+                        } else {
+                          content = "=";
+                          bg = "bg-amber-400 text-black";
+                        }
+                      }
+                      return (
+                        <div
+                          key={week}
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold border border-background ${bg} ${isFuture ? "opacity-50" : ""}`}
+                          title={isFuture ? `Week ${week}` : `Week ${week}: ${w!.myPts}-${w!.theirPts}`}
+                        >
+                          {content}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Records + Rank */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
+                  Rank {h2hStats?.myRank ?? "—"}
+                  {h2hStats && h2hStats.myRankChange !== 0 && (
+                    <span className={h2hStats.myRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.myRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.myRankChange)}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
+                  Rank {h2hStats?.theirRank ?? "—"}
+                  {h2hStats && h2hStats.theirRankChange !== 0 && (
+                    <span className={h2hStats.theirRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.theirRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.theirRankChange)}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Biggest gap */}
+            {h2hStats && h2hStats.biggestGap.diff > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Biggest week gap: <span className="font-semibold text-foreground">Week {h2hStats.biggestGap.week}</span> by {h2hStats.biggestGap.diff} pts
+                ({h2hStats.biggestGap.winner === "me" ? (user?.name || "You").split(" ")[0] : (viewingUser?.name || "Them").split(" ")[0]})
+              </p>
+            )}
+
+            {/* Weekly points bar chart */}
+            {weeklyPointsH2H.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="w-8 shrink-0" />
+                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
+                  <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
+                  <span className="w-12" />
+                </div>
+                {weeklyPointsH2H.map((w) => {
+                  const max = Math.max(w.myPts, w.theirPts, 1);
+                  const tied = w.myPts === w.theirPts;
+                  const myWins = w.myPts > w.theirPts || tied;
+                  const theirWins = w.theirPts > w.myPts || tied;
+                  return (
+                    <div key={w.week} className="flex items-center gap-2 text-xs">
+                      <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
+                      <div className="flex-1 flex items-center gap-1">
+                        <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
+                          <div
+                            className={`h-full rounded-r transition-all duration-700 ease-out ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
+                            style={{ width: `${(w.myPts / max) * 100}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
+                            {w.myPts}
+                          </span>
+                        </div>
+                        <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
+                          <div
+                            className={`h-full rounded-l transition-all duration-700 ease-out ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
+                            style={{ width: `${(w.theirPts / max) * 100}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
+                            {w.theirPts}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Projected teams — all in one row */}
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projected Finish</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
+                  {myProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
+                  {myProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
+                  {theirProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
+                  {theirProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {differCount > 0 && (
+              <p className="text-center text-xs text-muted-foreground pt-1">
+                Differ on {differCount} of {matches?.length ?? 272} games
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

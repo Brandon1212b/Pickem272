@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   useGetLeaderboard,
   useGetLeaderboardTrends,
@@ -18,6 +18,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ALL_NFL_TEAMS, TeamRecordsCard } from "@/components/team-records-card";
 import type { TeamRecord } from "@/components/team-records-card";
+import { Badge } from "@/components/ui/badge";
+import { Trophy } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 const FALLBACK_COLORS = [
   "#007AFF", "#FF6B35", "#34C759", "#AF52DE",
@@ -49,6 +52,132 @@ function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase();
+}
+
+interface SeasonRecapData {
+  achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[];
+  weeklyWinners: {
+    week: number;
+    winners: { userId: number; name: string; avatar: string | null; points: number }[];
+  }[];
+}
+
+function AvatarBubble({ name, color, size = 20 }: { name: string; color?: string | null; size?: number }) {
+  return (
+    <div
+      title={name}
+      className="rounded-full flex items-center justify-center text-white font-bold select-none shrink-0"
+      style={{ backgroundColor: color ?? "#007AFF", width: size, height: size, fontSize: size * 0.38 }}
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
+function SeasonAwardsSection({
+  data,
+  loading,
+  userColorMap,
+}: {
+  data: SeasonRecapData | null;
+  loading: boolean;
+  userColorMap: Record<string, string>;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (!data || (data.achievements.length === 0 && data.weeklyWinners.length === 0)) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <Trophy className="w-8 h-8 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">Season awards unlock once games are completed</p>
+          <p className="text-xs mt-1">Check back after Week 1!</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {data.achievements.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-500" />
+              Season Awards
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">Updated as games complete</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.achievements.map((a, i) => {
+              const isTieList = a.name.includes(",");
+              return (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
+                <div className="shrink-0">
+                  {isTieList ? (
+                    <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold">
+                      {a.name.split(",").length}
+                    </div>
+                  ) : (
+                    <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] font-bold shrink-0">{a.label}</Badge>
+                    <span className="font-semibold text-sm">{a.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{a.detail}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-lg font-bold text-primary">{a.value}</p>
+                </div>
+              </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.weeklyWinners.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Weekly Winners</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {data.weeklyWinners.map((w) => (
+              <div key={w.week} className="flex items-start gap-3 py-1.5">
+                <span className="text-xs font-bold text-muted-foreground w-10 shrink-0">Wk {w.week}</span>
+                <div className="flex -space-x-1.5 pt-0.5 shrink-0">
+                  {w.winners.map((winner) => (
+                    <AvatarBubble
+                      key={winner.userId}
+                      name={winner.name}
+                      color={userColorMap[winner.name] ?? winner.avatar}
+                      size={26}
+                    />
+                  ))}
+                </div>
+                <span className="flex-1 min-w-0 text-sm font-semibold">
+                  {w.winners.map((winner) => winner.name).join(", ")}
+                </span>
+                <span className="text-xs font-bold text-primary whitespace-nowrap">
+                  {w.winners[0]?.points ?? 0} pts
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }
 
 type TrajectoryDotProps = {
@@ -196,6 +325,24 @@ export default function Leaderboard() {
   const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
     query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
   });
+
+  const { data: seasonRecap, isLoading: loadingSeasonRecap } = useQuery<SeasonRecapData>({
+    queryKey: ["season-recap"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboard/season-recap");
+      if (!res.ok) throw new Error("Failed to fetch season recap");
+      return res.json() as Promise<SeasonRecapData>;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const userColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const entry of leaderboard ?? []) {
+      map[entry.name] = entry.avatar ?? "#007AFF";
+    }
+    return map;
+  }, [leaderboard]);
 
   // null = follow active week; number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -584,6 +731,13 @@ export default function Leaderboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Season Awards — moved from Recap */}
+      <SeasonAwardsSection
+        data={seasonRecap ?? null}
+        loading={loadingSeasonRecap}
+        userColorMap={userColorMap}
+      />
     </div>
   );
 }

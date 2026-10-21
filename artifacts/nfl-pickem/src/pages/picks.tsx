@@ -682,7 +682,7 @@ export default function Picks() {
                     </span>
                     <span>·</span>
                     <span className="font-medium text-foreground">
-                      {viewingUser?.name.split(" ")[0]} {theirRecord.correct}-{theirRecord.wrong}
+                      {(viewingUser?.name || "Them").split(" ")[0]} {theirRecord.correct}-{theirRecord.wrong}
                     </span>
                     {differCount > 0 && (
                       <>
@@ -696,7 +696,7 @@ export default function Picks() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Select
-                value={viewingUserId?.toString() ?? "me"}
+                value={leaderboard?.some(e => e.userId === viewingUserId) ? String(viewingUserId) : "me"}
                 onValueChange={(v) => setViewingUserId(v === "me" ? null : Number(v))}
               >
                 <SelectTrigger className="w-[160px] h-8 text-xs">

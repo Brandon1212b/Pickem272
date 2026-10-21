@@ -239,8 +239,12 @@ export default function Picks() {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
-  // Tutorial popup — shows on first visit to picks page
-  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem("picks_tutorial_seen"));
+  // Tutorial popup — only on first visit and only while season is still pre-season
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (localStorage.getItem("picks_tutorial_seen")) return false;
+    return true;
+  });
 
   // Lock state: show locked view when server has all picks AND user hasn't explicitly unlocked
   const picksUnlockedKey = `picks_unlocked_${user?.id}`;
@@ -583,8 +587,10 @@ export default function Picks() {
   );
 
   // ── TUTORIAL DIALOG ───────────────────────────────────────────────────────────
+  // Never show once the season is underway
+  const shouldShowTutorial = showTutorial && status?.mode !== "in-season" && (status?.lastCompletedWeek ?? 0) === 0;
   const TutorialDialog = (
-    <AlertDialog open={showTutorial} onOpenChange={(open) => { if (!open) dismissTutorial(); }}>
+    <AlertDialog open={shouldShowTutorial} onOpenChange={(open) => { if (!open) dismissTutorial(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>🏈 Before You Start Picking</AlertDialogTitle>
@@ -947,8 +953,137 @@ export default function Picks() {
         )}
         </div>
       </div>
-    );
-  }
+
+      {/* Head-to-Head Share Graphic (available in locked view) */}
+      <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-background">
+          <div className="p-6 space-y-6" id="h2h-share-graphic">
+            <DialogHeader className="text-center">
+              <DialogTitle className="text-2xl font-bold">
+                You vs {viewingUser?.name || "Them"}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">Head-to-Head Snapshot</p>
+            </DialogHeader>
+
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">You</p>
+                  <p className="text-3xl font-bold">{myRecord.correct}-{myRecord.wrong}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {leaderboard?.find(e => e.userId === user?.id)?.totalPoints ?? 0} pts
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                  <p className="text-3xl font-bold">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {viewingUser?.totalPoints ?? 0} pts
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {differCount > 0 && (
+              <div className="text-center text-sm text-amber-600 dark:text-amber-400 font-medium">
+                Differ on {differCount} of {matches?.length ?? 272} games
+              </div>
+            )}
+
+            {weeklyPointsH2H.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Points by Week</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1 text-sm">
+                    <div className="grid grid-cols-3 font-semibold text-xs text-muted-foreground pb-1">
+                      <span>Week</span>
+                      <span className="text-center">You</span>
+                      <span className="text-center">{(viewingUser?.name || "Them").split(" ")[0]}</span>
+                    </div>
+                    {weeklyPointsH2H.map((w) => (
+                      <div key={w.week} className="grid grid-cols-3 py-1 border-t border-border/40">
+                        <span>Wk {w.week}</span>
+                        <span className="text-center font-medium">{w.myPts}</span>
+                        <span className="text-center font-medium">{w.theirPts}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Your Projected Top 4</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {myProjected.top4.map((t) => (
+                    <div key={t.team} className="flex items-center gap-2 text-sm">
+                      <TeamLogo team={t.team} size={20} />
+                      <span className="font-medium">{t.team}</span>
+                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Their Projected Top 4</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {theirProjected.top4.map((t) => (
+                    <div key={t.team} className="flex items-center gap-2 text-sm">
+                      <TeamLogo team={t.team} size={20} />
+                      <span className="font-medium">{t.team}</span>
+                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Your Projected Last 4</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {myProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex items-center gap-2 text-sm">
+                      <TeamLogo team={t.team} size={20} />
+                      <span className="font-medium">{t.team}</span>
+                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Their Projected Last 4</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {theirProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex items-center gap-2 text-sm">
+                      <TeamLogo team={t.team} size={20} />
+                      <span className="font-medium">{t.team}</span>
+                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground pt-2">
+              Screenshot this card to share your head-to-head
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
   // ── EDITING VIEW ──────────────────────────────────────────────────────────────
   return (

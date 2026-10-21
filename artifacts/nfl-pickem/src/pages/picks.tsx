@@ -1068,18 +1068,53 @@ export default function Picks() {
               )}
             </div>
 
-            {/* Season progress */}
+            {/* Season progress with weekly milestones */}
             {h2hStats && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                   <span>Season progress</span>
                   <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
                 </div>
-                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-400 rounded-full"
-                    style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
-                  />
+                <div className="relative">
+                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full"
+                      style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex justify-between items-center px-0.5">
+                    {Array.from({ length: h2hStats.totalWeeks }, (_, i) => {
+                      const week = i + 1;
+                      const w = weeklyPointsH2H.find((x) => x.week === week);
+                      const isFuture = !w;
+                      const myInitial = (user?.name || "Y")[0].toUpperCase();
+                      const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
+                      let content = String(week);
+                      let bg = "bg-muted text-muted-foreground";
+                      let textColor = "";
+                      if (w) {
+                        if (w.myPts > w.theirPts) {
+                          content = myInitial;
+                          bg = "bg-blue-500 text-white";
+                        } else if (w.theirPts > w.myPts) {
+                          content = theirInitial;
+                          bg = "bg-orange-500 text-white";
+                        } else {
+                          content = "=";
+                          bg = "bg-amber-400 text-black";
+                        }
+                      }
+                      return (
+                        <div
+                          key={week}
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold border border-background ${bg} ${isFuture ? "opacity-50" : ""}`}
+                          title={isFuture ? `Week ${week}` : `Week ${week}: ${w!.myPts}-${w!.theirPts}`}
+                        >
+                          {content}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -1654,18 +1689,53 @@ export default function Picks() {
               )}
             </div>
 
-            {/* Season progress */}
+            {/* Season progress with weekly milestones */}
             {h2hStats && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                   <span>Season progress</span>
                   <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
                 </div>
-                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-400 rounded-full"
-                    style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
-                  />
+                <div className="relative">
+                  <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full"
+                      style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex justify-between items-center px-0.5">
+                    {Array.from({ length: h2hStats.totalWeeks }, (_, i) => {
+                      const week = i + 1;
+                      const w = weeklyPointsH2H.find((x) => x.week === week);
+                      const isFuture = !w;
+                      const myInitial = (user?.name || "Y")[0].toUpperCase();
+                      const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
+                      let content = String(week);
+                      let bg = "bg-muted text-muted-foreground";
+                      let textColor = "";
+                      if (w) {
+                        if (w.myPts > w.theirPts) {
+                          content = myInitial;
+                          bg = "bg-blue-500 text-white";
+                        } else if (w.theirPts > w.myPts) {
+                          content = theirInitial;
+                          bg = "bg-orange-500 text-white";
+                        } else {
+                          content = "=";
+                          bg = "bg-amber-400 text-black";
+                        }
+                      }
+                      return (
+                        <div
+                          key={week}
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold border border-background ${bg} ${isFuture ? "opacity-50" : ""}`}
+                          title={isFuture ? `Week ${week}` : `Week ${week}: ${w!.myPts}-${w!.theirPts}`}
+                        >
+                          {content}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

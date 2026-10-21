@@ -1068,6 +1068,38 @@ export default function Picks() {
               )}
             </div>
 
+            {/* Player navigation */}
+            {leaderboard && leaderboard.length > 2 && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const others = leaderboard.filter((e) => e.userId !== user?.id);
+                    const idx = others.findIndex((e) => e.userId === viewingUserId);
+                    const prev = others[(idx - 1 + others.length) % others.length];
+                    if (prev) setViewingUserId(prev.userId);
+                  }}
+                >
+                  ← Prev
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const others = leaderboard.filter((e) => e.userId !== user?.id);
+                    const idx = others.findIndex((e) => e.userId === viewingUserId);
+                    const next = others[(idx + 1) % others.length];
+                    if (next) setViewingUserId(next.userId);
+                  }}
+                >
+                  Next →
+                </Button>
+              </div>
+            )}
+
             {/* Season progress with weekly milestones */}
             {h2hStats && (
               <div className="space-y-2">
@@ -1078,7 +1110,7 @@ export default function Picks() {
                 <div className="relative">
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-muted rounded-full"
+                      className="h-full bg-muted rounded-full transition-all duration-700 ease-out"
                       style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                     />
                   </div>
@@ -1175,7 +1207,7 @@ export default function Picks() {
                       <div className="flex-1 flex items-center gap-1">
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
                           <div
-                            className={`h-full rounded-r ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
+                            className={`h-full rounded-r transition-all duration-700 ease-out ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.myPts / max) * 100}%` }}
                           />
                           <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
@@ -1184,7 +1216,7 @@ export default function Picks() {
                         </div>
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
                           <div
-                            className={`h-full rounded-l ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
+                            className={`h-full rounded-l transition-all duration-700 ease-out ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.theirPts / max) * 100}%` }}
                           />
                           <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
@@ -1689,6 +1721,38 @@ export default function Picks() {
               )}
             </div>
 
+            {/* Player navigation */}
+            {leaderboard && leaderboard.length > 2 && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const others = leaderboard.filter((e) => e.userId !== user?.id);
+                    const idx = others.findIndex((e) => e.userId === viewingUserId);
+                    const prev = others[(idx - 1 + others.length) % others.length];
+                    if (prev) setViewingUserId(prev.userId);
+                  }}
+                >
+                  ← Prev
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const others = leaderboard.filter((e) => e.userId !== user?.id);
+                    const idx = others.findIndex((e) => e.userId === viewingUserId);
+                    const next = others[(idx + 1) % others.length];
+                    if (next) setViewingUserId(next.userId);
+                  }}
+                >
+                  Next →
+                </Button>
+              </div>
+            )}
+
             {/* Season progress with weekly milestones */}
             {h2hStats && (
               <div className="space-y-2">
@@ -1699,7 +1763,7 @@ export default function Picks() {
                 <div className="relative">
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-muted rounded-full"
+                      className="h-full bg-muted rounded-full transition-all duration-700 ease-out"
                       style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                     />
                   </div>
@@ -1796,7 +1860,7 @@ export default function Picks() {
                       <div className="flex-1 flex items-center gap-1">
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
                           <div
-                            className={`h-full rounded-r ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
+                            className={`h-full rounded-r transition-all duration-700 ease-out ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.myPts / max) * 100}%` }}
                           />
                           <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
@@ -1805,7 +1869,7 @@ export default function Picks() {
                         </div>
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
                           <div
-                            className={`h-full rounded-l ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
+                            className={`h-full rounded-l transition-all duration-700 ease-out ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.theirPts / max) * 100}%` }}
                           />
                           <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">

@@ -1061,44 +1061,26 @@ export default function Picks() {
               <h2 className="text-2xl font-black tracking-tight">
                 <span className="text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
                 <span className="text-muted-foreground font-normal"> vs </span>
-                <span className="text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
+                <Select
+                  value={viewingUserId ? String(viewingUserId) : ""}
+                  onValueChange={(v) => setViewingUserId(Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.filter((e) => e.userId !== user?.id).map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </h2>
               {h2hStats && (
                 <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
               )}
             </div>
-
-            {/* Player navigation */}
-            {leaderboard && leaderboard.length > 2 && (
-              <div className="flex justify-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    const others = leaderboard.filter((e) => e.userId !== user?.id);
-                    const idx = others.findIndex((e) => e.userId === viewingUserId);
-                    const prev = others[(idx - 1 + others.length) % others.length];
-                    if (prev) setViewingUserId(prev.userId);
-                  }}
-                >
-                  ← Prev
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    const others = leaderboard.filter((e) => e.userId !== user?.id);
-                    const idx = others.findIndex((e) => e.userId === viewingUserId);
-                    const next = others[(idx + 1) % others.length];
-                    if (next) setViewingUserId(next.userId);
-                  }}
-                >
-                  Next →
-                </Button>
-              </div>
-            )}
 
             {/* Season progress with weekly milestones */}
             {h2hStats && (
@@ -1714,44 +1696,26 @@ export default function Picks() {
               <h2 className="text-2xl font-black tracking-tight">
                 <span className="text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
                 <span className="text-muted-foreground font-normal"> vs </span>
-                <span className="text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
+                <Select
+                  value={viewingUserId ? String(viewingUserId) : ""}
+                  onValueChange={(v) => setViewingUserId(Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.filter((e) => e.userId !== user?.id).map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </h2>
               {h2hStats && (
                 <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
               )}
             </div>
-
-            {/* Player navigation */}
-            {leaderboard && leaderboard.length > 2 && (
-              <div className="flex justify-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    const others = leaderboard.filter((e) => e.userId !== user?.id);
-                    const idx = others.findIndex((e) => e.userId === viewingUserId);
-                    const prev = others[(idx - 1 + others.length) % others.length];
-                    if (prev) setViewingUserId(prev.userId);
-                  }}
-                >
-                  ← Prev
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    const others = leaderboard.filter((e) => e.userId !== user?.id);
-                    const idx = others.findIndex((e) => e.userId === viewingUserId);
-                    const next = others[(idx + 1) % others.length];
-                    if (next) setViewingUserId(next.userId);
-                  }}
-                >
-                  Next →
-                </Button>
-              </div>
-            )}
 
             {/* Season progress with weekly milestones */}
             {h2hStats && (

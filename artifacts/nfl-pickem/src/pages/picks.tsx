@@ -1077,7 +1077,7 @@ export default function Picks() {
                 </div>
                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full"
+                    className="h-full bg-amber-400 rounded-full"
                     style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                   />
                 </div>
@@ -1663,7 +1663,7 @@ export default function Picks() {
                 </div>
                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full"
+                    className="h-full bg-amber-400 rounded-full"
                     style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                   />
                 </div>

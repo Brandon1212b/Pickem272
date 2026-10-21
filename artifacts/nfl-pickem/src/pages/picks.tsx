@@ -119,6 +119,7 @@ export default function Picks() {
     const uid = params.get("user");
     return uid ? Number(uid) : null;
   });
+  const [leftPlayerId, setLeftPlayerId] = useState<number | null>(null); // null means current user
   const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
   const [showH2HShare, setShowH2HShare] = useState(false);
 
@@ -143,6 +144,12 @@ export default function Picks() {
     query: {
       enabled: !!viewingUserId && viewingUserId !== user?.id,
       queryKey: getGetUserPicksQueryKey(viewingUserId ?? 0),
+    },
+  });
+  const { data: leftPicks } = useGetUserPicks(leftPlayerId ?? 0, {
+    query: {
+      enabled: !!leftPlayerId && leftPlayerId !== user?.id,
+      queryKey: getGetUserPicksQueryKey(leftPlayerId ?? 0),
     },
   });
   const [, setLocation] = useLocation();
@@ -178,28 +185,30 @@ export default function Picks() {
     }
     return { correct, wrong, total: correct + wrong };
   };
-  const myRecord = computeRecord(picks);
+  const leftUser = leftPlayerId ? leaderboard?.find((e) => e.userId === leftPlayerId) : null;
+  const leftEffectivePicks = leftPlayerId && leftPlayerId !== user?.id ? leftPicks : picks;
+  const myRecord = computeRecord(leftEffectivePicks);
   const theirRecord = isComparing ? computeRecord(viewingPicks) : null;
 
   const differCount = useMemo(() => {
-    if (!isComparing || !picks || !viewingPicks) return 0;
+    if (!isComparing || !leftEffectivePicks || !viewingPicks) return 0;
     let n = 0;
     for (const m of matches ?? []) {
-      const mine = picks.find((p) => p.matchId === m.id)?.selectedTeam;
+      const mine = leftEffectivePicks.find((p) => p.matchId === m.id)?.selectedTeam;
       const theirs = viewingPicks.find((p) => p.matchId === m.id)?.selectedTeam;
       if (mine && theirs && mine !== theirs) n++;
     }
     return n;
-  }, [isComparing, picks, viewingPicks, matches]);
+  }, [isComparing, leftEffectivePicks, viewingPicks, matches]);
 
   // Weekly points for H2H graphic (only completed weeks)
   const weeklyPointsH2H = useMemo(() => {
-    if (!isComparing || !matches || !picks || !viewingPicks) return [];
+    if (!isComparing || !matches || !leftEffectivePicks || !viewingPicks) return [];
     const weeks = [...new Set(matches.filter(m => m.isCompleted).map(m => m.week))].sort((a, b) => a - b);
     return weeks.map(week => {
       const weekMatches = matches.filter(m => m.week === week && m.isCompleted);
       const myPts = weekMatches.reduce((sum, m) => {
-        const p = picks.find(pp => pp.matchId === m.id);
+        const p = leftEffectivePicks.find(pp => pp.matchId === m.id);
         return sum + (p?.pointsEarned ?? 0);
       }, 0);
       const theirPts = weekMatches.reduce((sum, m) => {
@@ -208,7 +217,7 @@ export default function Picks() {
       }, 0);
       return { week, myPts, theirPts };
     });
-  }, [isComparing, matches, picks, viewingPicks]);
+  }, [isComparing, matches, leftEffectivePicks, viewingPicks]);
 
   // Projected top/bottom 4 for both players
   const computeProjected = (pickList: typeof picks) => {
@@ -231,7 +240,7 @@ export default function Picks() {
       bottom4: sorted.slice(-4).reverse(),
     };
   };
-  const myProjected = useMemo(() => computeProjected(picks), [matches, picks]);
+  const myProjected = useMemo(() => computeProjected(leftEffectivePicks), [matches, leftEffectivePicks]);
   const theirProjected = useMemo(() => computeProjected(viewingPicks), [matches, viewingPicks]);
 
   // Extra H2H stats for the snapshot
@@ -261,7 +270,7 @@ export default function Picks() {
       }
     }
 
-    const myRank = leaderboard?.find((e) => e.userId === user?.id)?.rank;
+    const myRank = leaderboard?.find((e) => e.userId === (leftPlayerId ?? user?.id))?.rank;
     const theirRank = viewingUser?.rank;
 
     // Recent rank change from trends (positive = improved)
@@ -326,7 +335,7 @@ export default function Picks() {
       totalWeeks,
       story,
     };
-  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, viewingUser, myProjected, theirProjected, trends]);
+  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, leftPlayerId, viewingUser, myProjected, theirProjected, trends]);
 
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});
@@ -1059,7 +1068,21 @@ export default function Picks() {
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
-                <span className="text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
+                <Select
+                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <span className="text-muted-foreground font-normal"> vs </span>
                 <Select
                   value={viewingUserId ? String(viewingUserId) : ""}
@@ -1069,7 +1092,7 @@ export default function Picks() {
                     <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {leaderboard?.filter((e) => e.userId !== user?.id).map((e) => (
+                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
                       <SelectItem key={e.userId} value={String(e.userId)}>
                         {e.name}
                       </SelectItem>
@@ -1101,7 +1124,7 @@ export default function Picks() {
                       const week = i + 1;
                       const w = weeklyPointsH2H.find((x) => x.week === week);
                       const isFuture = !w;
-                      const myInitial = (user?.name || "Y")[0].toUpperCase();
+                      const myInitial = (leftUser?.name || user?.name || "Y")[0].toUpperCase();
                       const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
                       let content = String(week);
                       let bg = "bg-muted text-muted-foreground";
@@ -1136,7 +1159,7 @@ export default function Picks() {
             {/* Records + Rank */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(user?.name || "You").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
@@ -1174,7 +1197,7 @@ export default function Picks() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                   <span className="w-8 shrink-0" />
-                  <span className="flex-1 text-center text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
+                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
                   <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
                   <span className="w-12" />
                 </div>
@@ -1694,7 +1717,21 @@ export default function Picks() {
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
-                <span className="text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
+                <Select
+                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                >
+                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
+                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaderboard?.map((e) => (
+                      <SelectItem key={e.userId} value={String(e.userId)}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <span className="text-muted-foreground font-normal"> vs </span>
                 <Select
                   value={viewingUserId ? String(viewingUserId) : ""}
@@ -1704,7 +1741,7 @@ export default function Picks() {
                     <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {leaderboard?.filter((e) => e.userId !== user?.id).map((e) => (
+                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
                       <SelectItem key={e.userId} value={String(e.userId)}>
                         {e.name}
                       </SelectItem>
@@ -1736,7 +1773,7 @@ export default function Picks() {
                       const week = i + 1;
                       const w = weeklyPointsH2H.find((x) => x.week === week);
                       const isFuture = !w;
-                      const myInitial = (user?.name || "Y")[0].toUpperCase();
+                      const myInitial = (leftUser?.name || user?.name || "Y")[0].toUpperCase();
                       const theirInitial = (viewingUser?.name || "T")[0].toUpperCase();
                       let content = String(week);
                       let bg = "bg-muted text-muted-foreground";
@@ -1771,7 +1808,7 @@ export default function Picks() {
             {/* Records + Rank */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(user?.name || "You").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
@@ -1809,7 +1846,7 @@ export default function Picks() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                   <span className="w-8 shrink-0" />
-                  <span className="flex-1 text-center text-blue-500">{(user?.name || "You").split(" ")[0]}</span>
+                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
                   <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
                   <span className="w-12" />
                 </div>

@@ -304,7 +304,7 @@ export default function Picks() {
     const completedWeeks = weeklyPointsH2H.length;
     const totalWeeks = 18;
 
-    const myName = (user?.name || "You").split(" ")[0];
+    const myName = (leftUser?.name || user?.name || "You").split(" ")[0];
     const theirName = (viewingUser?.name || "Them").split(" ")[0];
 
     // One-line story

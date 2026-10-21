@@ -873,7 +873,7 @@ export default function Picks() {
                   className="h-8 text-xs px-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
                   onClick={() => setShowH2HShare(true)}
                 >
-                  H2H
+                  Click for H2H
                 </Button>
               )}
             </div>

@@ -109,6 +109,14 @@ export default function Picks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [viewingUserId, setViewingUserId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get("user");
+    return uid ? Number(uid) : null;
+  });
+  const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
+
   const { data: status, isLoading: loadingStatus } = useGetSeasonStatus();
   const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
     query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
@@ -184,13 +192,6 @@ export default function Picks() {
   const [resettingPicks, setResettingPicks] = useState(false);
   const [showFutureWeeks, setShowFutureWeeks] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
-  const [viewingUserId, setViewingUserId] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
-    const uid = params.get("user");
-    return uid ? Number(uid) : null;
-  });
-  const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>(["1"]);
 
   // Tutorial popup — shows on first visit to picks page

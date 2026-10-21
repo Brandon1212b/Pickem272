@@ -6,9 +6,12 @@ import {
   useGetSeasonStatus,
   useSavePicks,
   useAutofillPicks,
+  useGetLeaderboard,
   getGetUserPicksQueryKey,
   getListMatchesQueryKey,
+  getGetLeaderboardQueryKey,
 } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -34,6 +37,7 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { TeamLogo } from "@/lib/team-logos";
@@ -106,6 +110,14 @@ export default function Picks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [viewingUserId, setViewingUserId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get("user");
+    return uid ? Number(uid) : null;
+  });
+  const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
+
   const { data: status, isLoading: loadingStatus } = useGetSeasonStatus();
   const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
     query: { queryKey: getListMatchesQueryKey(), refetchInterval: 30_000 },
@@ -117,6 +129,62 @@ export default function Picks() {
       refetchInterval: 30_000,
     },
   });
+  const { data: leaderboard } = useGetLeaderboard({
+    query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 60_000 },
+  });
+  const { data: viewingPicks } = useGetUserPicks(viewingUserId ?? 0, {
+    query: {
+      enabled: !!viewingUserId && viewingUserId !== user?.id,
+      queryKey: getGetUserPicksQueryKey(viewingUserId ?? 0),
+    },
+  });
+  const [, setLocation] = useLocation();
+
+  // Sync URL when viewing user changes (shareable links)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (viewingUserId && viewingUserId !== user?.id) {
+      params.set("user", String(viewingUserId));
+    } else {
+      params.delete("user");
+    }
+    const search = params.toString();
+    const newPath = "/picks" + (search ? "?" + search : "");
+    if (window.location.pathname + window.location.search !== newPath) {
+      window.history.replaceState(null, "", newPath);
+    }
+  }, [viewingUserId, user?.id]);
+
+  const effectivePicks = viewingUserId && viewingUserId !== user?.id ? viewingPicks : picks;
+  const viewingUser = leaderboard?.find((e) => e.userId === viewingUserId);
+  const isComparing = !!viewingUserId && viewingUserId !== user?.id;
+
+  // Accuracy summary helpers
+  const computeRecord = (pickList: typeof picks) => {
+    if (!matches || !pickList) return { correct: 0, wrong: 0, total: 0 };
+    let correct = 0, wrong = 0;
+    for (const m of matches) {
+      if (!m.isCompleted || !m.winner) continue;
+      const p = pickList.find((pp) => pp.matchId === m.id);
+      if (!p?.selectedTeam) continue;
+      if (p.selectedTeam === m.winner) correct++; else wrong++;
+    }
+    return { correct, wrong, total: correct + wrong };
+  };
+  const myRecord = computeRecord(picks);
+  const theirRecord = isComparing ? computeRecord(viewingPicks) : null;
+
+  const differCount = useMemo(() => {
+    if (!isComparing || !picks || !viewingPicks) return 0;
+    let n = 0;
+    for (const m of matches ?? []) {
+      const mine = picks.find((p) => p.matchId === m.id)?.selectedTeam;
+      const theirs = viewingPicks.find((p) => p.matchId === m.id)?.selectedTeam;
+      if (mine && theirs && mine !== theirs) n++;
+    }
+    return n;
+  }, [isComparing, picks, viewingPicks, matches]);
+
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -311,7 +379,7 @@ export default function Picks() {
     const records: Record<string, { wins: number; losses: number; correct: number; decided: number }> = {};
     for (const team of ALL_TEAMS) records[team] = { wins: 0, losses: 0, correct: 0, decided: 0 };
     for (const match of matches) {
-      const pick = picks?.find((p) => p.matchId === match.id);
+      const pick = effectivePicks?.find((p) => p.matchId === match.id);
       if (!pick?.selectedTeam) continue;
       const pickedTeam = pick.selectedTeam;
       const otherTeam = pickedTeam === match.homeTeam ? match.awayTeam : match.homeTeam;
@@ -334,7 +402,7 @@ export default function Picks() {
         pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
       }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-  }, [matches, picks]);
+  }, [matches, effectivePicks]);
 
   // Actual current records + your accuracy on each team's decided games
   const actualRecordsSorted = useMemo(() => {
@@ -350,7 +418,7 @@ export default function Picks() {
         if (records[loser]) records[loser].losses += 1;
       }
       // Accuracy includes ties (nobody correct)
-      const pick = picks?.find((p) => p.matchId === match.id);
+      const pick = effectivePicks?.find((p) => p.matchId === match.id);
       if (!pick?.selectedTeam) continue;
       for (const team of [match.homeTeam, match.awayTeam]) {
         if (!records[team]) continue;
@@ -365,7 +433,7 @@ export default function Picks() {
         pct: rec.decided > 0 ? Math.round((rec.correct / rec.decided) * 100) : null,
       }))
       .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
-  }, [matches, picks]);
+  }, [matches, effectivePicks]);
 
   if (loadingStatus || loadingMatches || loadingPicks) {
     return (
@@ -499,13 +567,18 @@ export default function Picks() {
 
   // ── WEEK CARD (for locked view) ───────────────────────────────────────────────
   const renderWeekCard = (weekNum: number, weekMatches: MatchList, isCurrent = false) => {
-    const weekPicksData = weekMatches.map((m) => ({
-      match: m,
-      picked: localPicks[m.id] ?? picks?.find((p) => p.matchId === m.id)?.selectedTeam ?? "",
-    }));
+    const weekPicksData = weekMatches.map((m) => {
+      const mine = localPicks[m.id] ?? picks?.find((p) => p.matchId === m.id)?.selectedTeam ?? "";
+      const theirs = isComparing ? (viewingPicks?.find((p) => p.matchId === m.id)?.selectedTeam ?? "") : "";
+      return { match: m, picked: isComparing ? theirs || mine : mine, mine, theirs };
+    });
     const completedWithPick = weekPicksData.filter((p) => p.match.isCompleted && p.picked);
     const correct = completedWithPick.filter((p) => p.picked === p.match.winner).length;
     const wrong = completedWithPick.length - correct;
+
+    const filtered = showOnlyDiffers && isComparing
+      ? weekPicksData.filter((p) => p.mine && p.theirs && p.mine !== p.theirs)
+      : weekPicksData;
 
     return (
       <Card key={weekNum} className={isCurrent ? "border-primary/30 bg-primary/5" : undefined}>
@@ -522,32 +595,61 @@ export default function Picks() {
             ) : (
               <span className="text-xs text-muted-foreground">Pending</span>
             )}
+            {isComparing && (
+              <button
+                type="button"
+                onClick={() => setShowOnlyDiffers((v) => !v)}
+                className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  showOnlyDiffers ? "bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300" : "border-border text-muted-foreground"
+                }`}
+              >
+                {showOnlyDiffers ? "Showing diffs" : "Show diffs only"}
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {weekPicksData.map(({ match, picked }) => {
-              if (!picked) {
+            {filtered.map(({ match, picked, mine, theirs }) => {
+              const displayPick = isComparing ? (theirs || mine) : picked;
+              if (!displayPick) {
                 return (
                   <div key={match.id} className="w-10 h-10 rounded-xl border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground">
                     ?
                   </div>
                 );
               }
-              const isCorrect = match.isCompleted && picked === match.winner;
-              const isWrong = match.isCompleted && !!match.winner && picked !== match.winner;
+              const differs = isComparing && mine && theirs && mine !== theirs;
+              const isCorrect = match.isCompleted && displayPick === match.winner;
+              const isWrong = match.isCompleted && !!match.winner && displayPick !== match.winner;
               return (
-                <div key={match.id} className="relative">
-                  <div className={`rounded-xl border-2 p-1.5 ${
+                <div key={match.id} className="relative group">
+                  <div className={`rounded-xl border-2 p-1.5 flex items-center gap-1 ${
+                    differs ? "border-amber-500 bg-amber-500/10" :
                     isCorrect ? "border-green-500 bg-green-500/10" :
                     isWrong   ? "border-destructive/40 bg-destructive/5 opacity-70" :
                                 "border-border/50"
                   }`}>
-                    <TeamLogo team={picked} size={28} />
+                    {isComparing && mine && (
+                      <div className="flex flex-col items-center">
+                        <TeamLogo team={mine} size={20} />
+                        <span className="text-[7px] text-muted-foreground">You</span>
+                      </div>
+                    )}
+                    {isComparing && theirs && (
+                      <div className="flex flex-col items-center">
+                        <TeamLogo team={theirs} size={20} />
+                        <span className="text-[7px] text-muted-foreground">{viewingUser?.name.split(" ")[0] ?? "Them"}</span>
+                      </div>
+                    )}
+                    {!isComparing && <TeamLogo team={displayPick} size={28} />}
                   </div>
-                  {isCorrect && (
+                  {isCorrect && !differs && (
                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold leading-none">✓</div>
                   )}
-                  {isWrong && (
+                  {isWrong && !differs && (
                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive rounded-full flex items-center justify-center text-[8px] text-white font-bold leading-none">✗</div>
+                  )}
+                  {differs && (
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold leading-none">≠</div>
                   )}
                 </div>
               );
@@ -567,11 +669,67 @@ export default function Picks() {
         {/* Header */}
         <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-b shadow-sm">
           <div className="flex items-center justify-between max-w-5xl mx-auto">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">All Picks Submitted ✓</h1>
-              <p className="text-sm text-muted-foreground">
-                {serverPickCount} picks locked in across 18 weeks
-              </p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold tracking-tight truncate">
+                {isComparing && viewingUser ? `${viewingUser.name}'s Picks` : "All Picks Submitted ✓"}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground mt-0.5">
+                <span>{serverPickCount} picks locked in</span>
+                {isComparing && theirRecord && (
+                  <>
+                    <span className="hidden sm:inline">·</span>
+                    <span className="font-medium text-foreground">
+                      You {myRecord.correct}-{myRecord.wrong}
+                    </span>
+                    <span>·</span>
+                    <span className="font-medium text-foreground">
+                      {(viewingUser?.name || "Them").split(" ")[0]} {theirRecord.correct}-{theirRecord.wrong}
+                    </span>
+                    {differCount > 0 && (
+                      <>
+                        <span>·</span>
+                        <span
+                          className="text-amber-600 dark:text-amber-400"
+                          title="Games where you and the other player picked different teams"
+                        >
+                          Differ {differCount} of {matches?.length ?? 272}
+                        </span>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Select
+                value={leaderboard?.some(e => e.userId === viewingUserId) ? String(viewingUserId) : "me"}
+                onValueChange={(v) => setViewingUserId(v === "me" ? null : Number(v))}
+              >
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue placeholder="Compare with..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">My Picks</SelectItem>
+                  {leaderboard?.filter((e) => e.userId !== user?.id).map((e) => (
+                    <SelectItem key={e.userId} value={e.userId.toString()}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isComparing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => {
+                    const url = window.location.origin + "/picks?user=" + viewingUserId;
+                    navigator.clipboard.writeText(url).then(() => toast.success("Link copied!"));
+                  }}
+                >
+                  Share
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {countdown && status?.mode === "pre-season" && (
@@ -599,6 +757,25 @@ export default function Picks() {
             <span>Locks in <strong className="text-foreground">{countdown.days}d {countdown.hours}h {countdown.minutes}m {countdown.seconds}s</strong></span>
           </div>
         )}
+
+        {/* Who's Hot callout */}
+        {leaderboard && leaderboard.length > 1 && (() => {
+          try {
+            const hot = [...leaderboard].sort((a, b) => (b.correctPicks ?? 0) - (a.correctPicks ?? 0))[0];
+            if (!hot || hot.userId === user?.id) return null;
+            return (
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-amber-500/5 border-amber-500/20 text-sm">
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Who's Hot</p>
+                  <p className="font-semibold">{hot.name} is leading with {hot.correctPicks}-{hot.wrongPicks}</p>
+                </div>
+              </div>
+            );
+          } catch {
+            return null;
+          }
+        })()}
 
         {/* Team records */}
         {teamRecordsSorted.length > 0 && (() => {
@@ -655,7 +832,15 @@ export default function Picks() {
                                 return (
                                   <button
                                     key={team}
-                                    onClick={() => setSelectedTeamFilter(isSelected ? "all" : team)}
+                                    onClick={() => {
+                                      const next = isSelected ? "all" : team;
+                                      setSelectedTeamFilter(next);
+                                      if (next !== "all") {
+                                        setTimeout(() => {
+                                          document.getElementById("week-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                        }, 50);
+                                      }
+                                    }}
                                     className={cn(
                                       "flex flex-1 basis-0 min-w-0 flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all",
                                       isSelected
@@ -689,6 +874,7 @@ export default function Picks() {
 
         {teamFilterControl}
 
+        <div id="week-list" className="space-y-3">
         {/* Current week */}
         {currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
 
@@ -718,6 +904,7 @@ export default function Picks() {
           </div>
           )
         )}
+        </div>
       </div>
     );
   }

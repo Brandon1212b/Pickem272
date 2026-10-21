@@ -1164,50 +1164,53 @@ export default function Picks() {
             )}
 
             {/* Projected teams — all in one row */}
-            <div className="grid grid-cols-4 gap-2 text-[10px]">
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
-                {myProjected.top4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projected Finish</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
+                  {myProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
-                {myProjected.bottom4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
+                  {myProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
-                {theirProjected.top4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
+                  {theirProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
-                {theirProjected.bottom4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
+                  {theirProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1747,50 +1750,53 @@ export default function Picks() {
             )}
 
             {/* Projected teams — all in one row */}
-            <div className="grid grid-cols-4 gap-2 text-[10px]">
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
-                {myProjected.top4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projected Finish</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
+                  {myProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
-                {myProjected.bottom4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
+                  {myProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
-                {theirProjected.top4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
+                  {theirProjected.top4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
-                {theirProjected.bottom4.map((t) => (
-                  <div key={t.team} className="flex justify-center">
-                    <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-amber-400 rounded-full px-1" : ""}`}>
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
+                  {theirProjected.bottom4.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "bg-muted/60 rounded-full px-1.5 py-0.5" : ""}`}>
+                        <TeamLogo team={t.team} size={20} />
+                        <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 

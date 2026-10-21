@@ -754,17 +754,21 @@ export default function Picks() {
 
         {/* Who's Hot callout */}
         {leaderboard && leaderboard.length > 1 && (() => {
-          const hot = [...leaderboard].sort((a, b) => (b.correctPicks ?? 0) - (a.correctPicks ?? 0))[0];
-          if (!hot || hot.userId === user?.id) return null;
-          return (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-amber-500/5 border-amber-500/20 text-sm">
-              <span className="text-lg">🔥</span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Who's Hot</p>
-                <p className="font-semibold">{hot.name} is leading with {hot.correctPicks}-{hot.wrongPicks}</p>
+          try {
+            const hot = [...leaderboard].sort((a, b) => (b.correctPicks ?? 0) - (a.correctPicks ?? 0))[0];
+            if (!hot || hot.userId === user?.id) return null;
+            return (
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border bg-amber-500/5 border-amber-500/20 text-sm">
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Who's Hot</p>
+                  <p className="font-semibold">{hot.name} is leading with {hot.correctPicks}-{hot.wrongPicks}</p>
+                </div>
               </div>
-            </div>
-          );
+            );
+          } catch {
+            return null;
+          }
         })()}
 
         {/* Team records */}

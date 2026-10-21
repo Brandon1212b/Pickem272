@@ -952,7 +952,6 @@ export default function Picks() {
           )
         )}
         </div>
-      </div>
 
       {/* Head-to-Head Share Graphic (available in locked view) */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>

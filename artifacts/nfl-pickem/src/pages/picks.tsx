@@ -7,9 +7,11 @@ import {
   useSavePicks,
   useAutofillPicks,
   useGetLeaderboard,
+  useGetLeaderboardTrends,
   getGetUserPicksQueryKey,
   getListMatchesQueryKey,
   getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
 } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -133,6 +135,9 @@ export default function Picks() {
   });
   const { data: leaderboard } = useGetLeaderboard({
     query: { queryKey: getGetLeaderboardQueryKey(), refetchInterval: 60_000 },
+  });
+  const { data: trends } = useGetLeaderboardTrends({
+    query: { queryKey: getGetLeaderboardTrendsQueryKey(), refetchInterval: 60_000 },
   });
   const { data: viewingPicks } = useGetUserPicks(viewingUserId ?? 0, {
     query: {
@@ -258,6 +263,25 @@ export default function Picks() {
 
     const myRank = leaderboard?.find((e) => e.userId === user?.id)?.rank;
     const theirRank = viewingUser?.rank;
+
+    // Recent rank change from trends (positive = improved)
+    let myRankChange = 0;
+    let theirRankChange = 0;
+    if (trends && trends.length >= 2 && trends[0].weeklyPoints.length >= 2) {
+      const numWeeks = trends[0].weeklyPoints.length;
+      const rankAt = (weekIdx: number) =>
+        [...trends]
+          .sort((a, b) => (b.weeklyPoints[weekIdx] ?? 0) - (a.weeklyPoints[weekIdx] ?? 0))
+          .map((u, i) => ({ userId: u.userId, rank: i + 1 }));
+      const prevRanks = rankAt(numWeeks - 2);
+      const currRanks = rankAt(numWeeks - 1);
+      const prevMy = prevRanks.find((r) => r.userId === user?.id)?.rank;
+      const currMy = currRanks.find((r) => r.userId === user?.id)?.rank;
+      const prevTheir = prevRanks.find((r) => r.userId === viewingUser?.userId)?.rank;
+      const currTheir = currRanks.find((r) => r.userId === viewingUser?.userId)?.rank;
+      if (prevMy && currMy) myRankChange = prevMy - currMy;
+      if (prevTheir && currTheir) theirRankChange = prevTheir - currTheir;
+    }
     const pointDiff = myTotal - theirTotal;
 
     const myTopTeams = new Set(myProjected.top4.map((t) => t.team));
@@ -294,13 +318,15 @@ export default function Picks() {
       biggestGap,
       myRank,
       theirRank,
+      myRankChange,
+      theirRankChange,
       overlappingTop,
       overlappingBottom,
       completedWeeks,
       totalWeeks,
       story,
     };
-  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, viewingUser, myProjected, theirProjected]);
+  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, viewingUser, myProjected, theirProjected, trends]);
 
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});
@@ -1063,15 +1089,25 @@ export default function Picks() {
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
                 <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(user?.name || "You").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
-                <p className="text-xs mt-1 font-medium text-muted-foreground">
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
+                  {h2hStats && h2hStats.myRankChange !== 0 && (
+                    <span className={h2hStats.myRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.myRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.myRankChange)}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
                 <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
-                <p className="text-xs mt-1 font-medium text-muted-foreground">
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.theirRank ?? "—"}
+                  {h2hStats && h2hStats.theirRankChange !== 0 && (
+                    <span className={h2hStats.theirRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.theirRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.theirRankChange)}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -1095,8 +1131,9 @@ export default function Picks() {
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
-                  const myWins = w.myPts > w.theirPts;
-                  const theirWins = w.theirPts > w.myPts;
+                  const tied = w.myPts === w.theirPts;
+                  const myWins = w.myPts > w.theirPts || tied;
+                  const theirWins = w.theirPts > w.myPts || tied;
                   return (
                     <div key={w.week} className="flex items-center gap-2 text-xs">
                       <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
@@ -1128,39 +1165,47 @@ export default function Picks() {
 
             {/* Projected teams — all in one row */}
             <div className="grid grid-cols-4 gap-2 text-[10px]">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
                 {myProjected.top4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
                 {myProjected.bottom4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
                 {theirProjected.top4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
                 {theirProjected.bottom4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
@@ -1627,15 +1672,25 @@ export default function Picks() {
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
                 <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(user?.name || "You").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
-                <p className="text-xs mt-1 font-medium text-muted-foreground">
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
+                  {h2hStats && h2hStats.myRankChange !== 0 && (
+                    <span className={h2hStats.myRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.myRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.myRankChange)}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
                 <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
                 <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
-                <p className="text-xs mt-1 font-medium text-muted-foreground">
+                <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.theirRank ?? "—"}
+                  {h2hStats && h2hStats.theirRankChange !== 0 && (
+                    <span className={h2hStats.theirRankChange > 0 ? "text-green-500" : "text-red-500"}>
+                      {h2hStats.theirRankChange > 0 ? "↑" : "↓"}{Math.abs(h2hStats.theirRankChange)}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -1659,8 +1714,9 @@ export default function Picks() {
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
-                  const myWins = w.myPts > w.theirPts;
-                  const theirWins = w.theirPts > w.myPts;
+                  const tied = w.myPts === w.theirPts;
+                  const myWins = w.myPts > w.theirPts || tied;
+                  const theirWins = w.theirPts > w.myPts || tied;
                   return (
                     <div key={w.week} className="flex items-center gap-2 text-xs">
                       <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
@@ -1692,39 +1748,47 @@ export default function Picks() {
 
             {/* Projected teams — all in one row */}
             <div className="grid grid-cols-4 gap-2 text-[10px]">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Top 4</p>
                 {myProjected.top4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Last 4</p>
                 {myProjected.bottom4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Top 4</p>
                 {theirProjected.top4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingTop.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Last 4</p>
                 {theirProjected.bottom4.map((t) => (
-                  <div key={t.team} className={`flex items-center gap-1 ${h2hStats?.overlappingBottom.includes(t.team) ? "text-primary font-semibold" : ""}`}>
-                    <TeamLogo team={t.team} size={14} />
-                    <span className="truncate">{t.team}</span>
+                  <div key={t.team} className="flex flex-col items-center gap-0.5">
+                    <div className={h2hStats?.overlappingBottom.includes(t.team) ? "ring-2 ring-purple-500 rounded-full" : ""}>
+                      <TeamLogo team={t.team} size={22} />
+                    </div>
+                    <span className="tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
                   </div>
                 ))}
               </div>

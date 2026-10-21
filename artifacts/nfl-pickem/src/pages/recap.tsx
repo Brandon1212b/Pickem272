@@ -44,14 +44,6 @@ interface RecapData {
   highlights: { type: string; headline: string; detail: string; team: string | null }[];
 }
 
-interface SeasonRecapData {
-  achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[];
-  weeklyWinners: {
-    week: number;
-    winners: { userId: number; name: string; avatar: string | null; points: number }[];
-  }[];
-}
-
 function HighlightIcon({ type }: { type: string }) {
   if (type === "biggest-upset") return <Zap className="w-4 h-4 text-orange-500" />;
   if (type === "most-popular-upset") return <TrendingUp className="w-4 h-4 text-green-500" />;
@@ -101,7 +93,6 @@ export default function Recap() {
   const queryClient = useQueryClient();
   const [smackText, setSmackText] = useState("");
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [showSeasonRecap, setShowSeasonRecap] = useState(false);
 
   const { data: status } = useGetSeasonStatus({
     query: { queryKey: getGetSeasonStatusQueryKey(), refetchInterval: 30_000 },
@@ -136,17 +127,6 @@ export default function Recap() {
     refetchInterval: 30_000,
   });
 
-  const { data: seasonRecap, isLoading: loadingSeasonRecap } = useQuery<SeasonRecapData>({
-    queryKey: ["season-recap"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard/season-recap");
-      if (!res.ok) throw new Error("Failed to fetch season recap");
-      return res.json() as Promise<SeasonRecapData>;
-    },
-    enabled: showSeasonRecap,
-    refetchInterval: 30_000,
-  });
-
   const userColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     for (const entry of leaderboard ?? []) {
@@ -161,8 +141,6 @@ export default function Recap() {
     postSmack.mutate({ data: { name: user.name, message: smackText.substring(0, 280) } });
   };
 
-  const isSeasonStarted = status?.lastCompletedWeek !== undefined && status.lastCompletedWeek > 0;
-
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
@@ -175,76 +153,54 @@ export default function Recap() {
               : "Pre-season — picks are still open"}
           </p>
         </div>
-        {isSeasonStarted && (
-          <button
-            onClick={() => setShowSeasonRecap((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-          >
-            <Trophy className="w-3.5 h-3.5" />
-            {showSeasonRecap ? "Weekly View" : "Season Awards"}
-          </button>
-        )}
       </div>
 
       {/* Week selector */}
-      {!showSeasonRecap && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {Array.from({ length: 18 }, (_, i) => i + 1).map((week) => {
-            const isCompleted = week <= (status?.lastCompletedWeek ?? 0);
-            const isCurrent = week === activeWeek;
-            const isSelected = displayWeek === week;
-            return (
-              <button
-                key={week}
-                onClick={() => setSelectedWeek(week === activeWeek ? null : week)}
-                className={cn(
-                  "flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors relative",
-                  isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80",
-                )}
-              >
-                W{week}
-                {isCompleted && !isSelected && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-background" />
-                )}
-                {isCurrent && !isSelected && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full border border-background" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {Array.from({ length: 18 }, (_, i) => i + 1).map((week) => {
+          const isCompleted = week <= (status?.lastCompletedWeek ?? 0);
+          const isCurrent = week === activeWeek;
+          const isSelected = displayWeek === week;
+          return (
+            <button
+              key={week}
+              onClick={() => setSelectedWeek(week === activeWeek ? null : week)}
+              className={cn(
+                "flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors relative",
+                isSelected
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80",
+              )}
+            >
+              W{week}
+              {isCompleted && !isSelected && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-background" />
+              )}
+              {isCurrent && !isSelected && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full border border-background" />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Season Recap mode */}
-      {showSeasonRecap ? (
-        <SeasonRecapSection
-          data={seasonRecap ?? null}
-          loading={loadingSeasonRecap}
-          userColorMap={userColorMap}
-        />
+      {/* Weekly recap content */}
+      {loadingRecap ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      ) : recap ? (
+        <WeeklyRecapContent recap={recap} userColorMap={userColorMap} />
       ) : (
-        <>
-          {/* Weekly recap content */}
-          {loadingRecap ? (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          ) : recap ? (
-            <WeeklyRecapContent recap={recap} userColorMap={userColorMap} />
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Newspaper className="w-8 h-8 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">No recap available for Week {displayWeek}</p>
-                <p className="text-xs mt-1">Check back once picks are in.</p>
-              </CardContent>
-            </Card>
-          )}
-        </>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Newspaper className="w-8 h-8 mx-auto mb-3 opacity-40" />
+            <p className="font-medium">No recap available for Week {displayWeek}</p>
+            <p className="text-xs mt-1">Check back once picks are in.</p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Smack Board — always visible */}
@@ -504,114 +460,6 @@ function WeeklyRecapContent({
             <Newspaper className="w-8 h-8 mx-auto mb-3 opacity-40" />
             <p className="font-medium">Week {recap.week} recap coming soon</p>
             <p className="text-xs mt-1">Not enough picks submitted yet.</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function SeasonRecapSection({
-  data,
-  loading,
-  userColorMap,
-}: {
-  data: SeasonRecapData | null;
-  loading: boolean;
-  userColorMap: Record<string, string>;
-}) {
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
-
-  if (!data || (data.achievements.length === 0 && data.weeklyWinners.length === 0)) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">
-          <Trophy className="w-8 h-8 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">Season awards unlock once games are completed</p>
-          <p className="text-xs mt-1">Check back after Week 1!</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Season Achievements */}
-      {data.achievements.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              Season Awards
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">Updated as games complete</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {data.achievements.map((a, i) => {
-              const isTieList = a.name.includes(",");
-              return (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
-                <div className="shrink-0">
-                  {isTieList ? (
-                    <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold">
-                      {a.name.split(",").length}
-                    </div>
-                  ) : (
-                    <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] font-bold shrink-0">{a.label}</Badge>
-                    <span className="font-semibold text-sm">{a.name}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{a.detail}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-lg font-bold text-primary">{a.value}</p>
-                </div>
-              </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Weekly Winners */}
-      {data.weeklyWinners.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Weekly Winners</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {data.weeklyWinners.map((w) => (
-              <div key={w.week} className="flex items-start gap-3 py-1.5">
-                <span className="text-xs font-bold text-muted-foreground w-10 shrink-0">Wk {w.week}</span>
-                <div className="flex -space-x-1.5 pt-0.5 shrink-0">
-                  {w.winners.map((winner) => (
-                    <AvatarBubble
-                      key={winner.userId}
-                      name={winner.name}
-                      color={userColorMap[winner.name] ?? winner.avatar}
-                      size={26}
-                    />
-                  ))}
-                </div>
-                <span className="flex-1 min-w-0 text-sm font-semibold">
-                  {w.winners.map((winner) => winner.name).join(", ")}
-                </span>
-                <span className="text-xs font-bold text-primary whitespace-nowrap">
-                  {w.winners[0]?.points ?? 0} pts
-                </span>
-              </div>
-            ))}
           </CardContent>
         </Card>
       )}

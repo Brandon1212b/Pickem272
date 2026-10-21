@@ -875,16 +875,14 @@ export default function Picks() {
                   ))}
                 </SelectContent>
               </Select>
-              {isComparing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs px-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
-                  onClick={() => setShowH2HShare(true)}
-                >
-                  Click for H2H
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs px-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                onClick={() => setShowH2HShare(true)}
+              >
+                Click for H2H
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               {countdown && status?.mode === "pre-season" && (

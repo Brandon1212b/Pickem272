@@ -1076,12 +1076,6 @@ export default function Picks() {
               </div>
             </div>
 
-            {differCount > 0 && (
-              <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
-                Differ on {differCount} of {matches?.length ?? 272} games
-              </p>
-            )}
-
             {/* Biggest gap */}
             {h2hStats && h2hStats.biggestGap.diff > 0 && (
               <p className="text-center text-xs text-muted-foreground">
@@ -1109,19 +1103,19 @@ export default function Picks() {
                       <div className="flex-1 flex items-center gap-1">
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
                           <div
-                            className={`h-full rounded-r ${myWins ? "bg-green-500" : "bg-blue-500"}`}
+                            className={`h-full rounded-r ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.myPts / max) * 100}%` }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white mix-blend-difference">
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
                             {w.myPts}
                           </span>
                         </div>
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
                           <div
-                            className={`h-full rounded-l ${theirWins ? "bg-green-500" : "bg-orange-500"}`}
+                            className={`h-full rounded-l ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.theirPts / max) * 100}%` }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white mix-blend-difference">
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
                             {w.theirPts}
                           </span>
                         </div>
@@ -1172,15 +1166,11 @@ export default function Picks() {
               </div>
             </div>
 
-            {(h2hStats?.overlappingTop.length ?? 0) > 0 || (h2hStats?.overlappingBottom.length ?? 0) > 0 ? (
-              <p className="text-center text-[10px] text-primary font-medium">
-                Shared teams highlighted
+            {differCount > 0 && (
+              <p className="text-center text-xs text-muted-foreground pt-1">
+                Differ on {differCount} of {matches?.length ?? 272} games
               </p>
-            ) : null}
-
-            <p className="text-center text-[10px] text-muted-foreground pt-1">
-              Screenshot to share
-            </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1650,12 +1640,6 @@ export default function Picks() {
               </div>
             </div>
 
-            {differCount > 0 && (
-              <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
-                Differ on {differCount} of {matches?.length ?? 272} games
-              </p>
-            )}
-
             {/* Biggest gap */}
             {h2hStats && h2hStats.biggestGap.diff > 0 && (
               <p className="text-center text-xs text-muted-foreground">
@@ -1683,19 +1667,19 @@ export default function Picks() {
                       <div className="flex-1 flex items-center gap-1">
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden flex justify-end relative">
                           <div
-                            className={`h-full rounded-r ${myWins ? "bg-green-500" : "bg-blue-500"}`}
+                            className={`h-full rounded-r ${myWins ? "bg-blue-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.myPts / max) * 100}%` }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white mix-blend-difference">
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
                             {w.myPts}
                           </span>
                         </div>
                         <div className="flex-1 h-5 bg-secondary/60 rounded overflow-hidden relative">
                           <div
-                            className={`h-full rounded-l ${theirWins ? "bg-green-500" : "bg-orange-500"}`}
+                            className={`h-full rounded-l ${theirWins ? "bg-orange-500" : "bg-muted-foreground/30"}`}
                             style={{ width: `${(w.theirPts / max) * 100}%` }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white mix-blend-difference">
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
                             {w.theirPts}
                           </span>
                         </div>
@@ -1746,15 +1730,11 @@ export default function Picks() {
               </div>
             </div>
 
-            {(h2hStats?.overlappingTop.length ?? 0) > 0 || (h2hStats?.overlappingBottom.length ?? 0) > 0 ? (
-              <p className="text-center text-[10px] text-primary font-medium">
-                Shared teams highlighted
+            {differCount > 0 && (
+              <p className="text-center text-xs text-muted-foreground pt-1">
+                Differ on {differCount} of {matches?.length ?? 272} games
               </p>
-            ) : null}
-
-            <p className="text-center text-[10px] text-muted-foreground pt-1">
-              Screenshot to share
-            </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

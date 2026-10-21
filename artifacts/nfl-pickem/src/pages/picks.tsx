@@ -688,7 +688,12 @@ export default function Picks() {
                     {differCount > 0 && (
                       <>
                         <span>·</span>
-                        <span className="text-amber-600 dark:text-amber-400">Differ {differCount}</span>
+                        <span
+                          className="text-amber-600 dark:text-amber-400"
+                          title="Games where you and the other player picked different teams"
+                        >
+                          Differ {differCount} of {matches?.length ?? 272}
+                        </span>
                       </>
                     )}
                   </>

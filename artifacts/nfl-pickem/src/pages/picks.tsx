@@ -854,7 +854,7 @@ export default function Picks() {
                 value={leaderboard?.some(e => e.userId === viewingUserId) ? String(viewingUserId) : "me"}
                 onValueChange={(v) => setViewingUserId(v === "me" ? null : Number(v))}
               >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectTrigger className="w-[160px] h-8 text-xs ring-2 ring-primary/40 shadow-[0_0_12px_rgba(59,130,246,0.4)]">
                   <SelectValue placeholder="Compare with..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -870,10 +870,10 @@ export default function Picks() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs px-2"
+                  className="h-8 text-xs px-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
                   onClick={() => setShowH2HShare(true)}
                 >
-                  Share
+                  H2H
                 </Button>
               )}
             </div>
@@ -1078,7 +1078,7 @@ export default function Picks() {
                 <div className="relative">
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-400 rounded-full"
+                      className="h-full bg-muted rounded-full"
                       style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                     />
                   </div>
@@ -1699,7 +1699,7 @@ export default function Picks() {
                 <div className="relative">
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-400 rounded-full"
+                      className="h-full bg-muted rounded-full"
                       style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
                     />
                   </div>

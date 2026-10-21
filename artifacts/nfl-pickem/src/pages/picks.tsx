@@ -229,6 +229,76 @@ export default function Picks() {
   const myProjected = useMemo(() => computeProjected(picks), [matches, picks]);
   const theirProjected = useMemo(() => computeProjected(viewingPicks), [matches, viewingPicks]);
 
+  // Extra H2H stats for the snapshot
+  const h2hStats = useMemo(() => {
+    if (!isComparing || weeklyPointsH2H.length === 0) return null;
+    let myWeekWins = 0;
+    let theirWeekWins = 0;
+    let ties = 0;
+    let myTotal = 0;
+    let theirTotal = 0;
+    let biggestGap = { week: 0, diff: 0, winner: "" as "me" | "them" | "" };
+
+    for (const w of weeklyPointsH2H) {
+      myTotal += w.myPts;
+      theirTotal += w.theirPts;
+      if (w.myPts > w.theirPts) myWeekWins++;
+      else if (w.theirPts > w.myPts) theirWeekWins++;
+      else ties++;
+
+      const gap = Math.abs(w.myPts - w.theirPts);
+      if (gap > biggestGap.diff) {
+        biggestGap = {
+          week: w.week,
+          diff: gap,
+          winner: w.myPts > w.theirPts ? "me" : "them",
+        };
+      }
+    }
+
+    const myRank = leaderboard?.find((e) => e.userId === user?.id)?.rank;
+    const theirRank = viewingUser?.rank;
+    const pointDiff = myTotal - theirTotal;
+
+    const myTopTeams = new Set(myProjected.top4.map((t) => t.team));
+    const theirTopTeams = new Set(theirProjected.top4.map((t) => t.team));
+    const myBotTeams = new Set(myProjected.bottom4.map((t) => t.team));
+    const theirBotTeams = new Set(theirProjected.bottom4.map((t) => t.team));
+
+    const overlappingTop = [...myTopTeams].filter((t) => theirTopTeams.has(t));
+    const overlappingBottom = [...myBotTeams].filter((t) => theirBotTeams.has(t));
+
+    const completedWeeks = weeklyPointsH2H.length;
+    const totalWeeks = 18;
+
+    // One-line story
+    let story = "";
+    if (pointDiff > 0) {
+      story = `You lead by ${pointDiff} pts and are ${myWeekWins}-${theirWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    } else if (pointDiff < 0) {
+      story = `They lead by ${-pointDiff} pts and are ${theirWeekWins}-${myWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    } else {
+      story = `Tied on points · ${myWeekWins}-${theirWeekWins}${ties ? `-${ties}` : ""} in weeks`;
+    }
+
+    return {
+      myWeekWins,
+      theirWeekWins,
+      ties,
+      myTotal,
+      theirTotal,
+      pointDiff,
+      biggestGap,
+      myRank,
+      theirRank,
+      overlappingTop,
+      overlappingBottom,
+      completedWeeks,
+      totalWeeks,
+      story,
+    };
+  }, [isComparing, weeklyPointsH2H, leaderboard, user?.id, viewingUser, myProjected, theirProjected]);
+
 
   const [localPicks, setLocalPicks] = useState<Record<number, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -955,127 +1025,173 @@ export default function Picks() {
 
       {/* Head-to-Head Share Graphic (available in locked view) */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-6 space-y-6" id="h2h-share-graphic">
-            <DialogHeader className="text-center">
-              <DialogTitle className="text-2xl font-bold">
-                You vs {viewingUser?.name || "Them"}
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground">Head-to-Head Snapshot</p>
-            </DialogHeader>
-
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground">You</p>
-                  <p className="text-3xl font-bold">{myRecord.correct}-{myRecord.wrong}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {leaderboard?.find(e => e.userId === user?.id)?.totalPoints ?? 0} pts
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground">{(viewingUser?.name || "Them").split(" ")[0]}</p>
-                  <p className="text-3xl font-bold">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {viewingUser?.totalPoints ?? 0} pts
-                  </p>
-                </CardContent>
-              </Card>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
+          <div className="p-5 space-y-4" id="h2h-share-graphic">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-black tracking-tight">
+                You <span className="text-muted-foreground font-normal">vs</span> {(viewingUser?.name || "Them").split(" ")[0]}
+              </h2>
+              {h2hStats && (
+                <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
+              )}
             </div>
 
-            {differCount > 0 && (
-              <div className="text-center text-sm text-amber-600 dark:text-amber-400 font-medium">
-                Differ on {differCount} of {matches?.length ?? 272} games
+            {/* Season progress */}
+            {h2hStats && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                  <span>Season progress</span>
+                  <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
+                </div>
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                  />
+                </div>
               </div>
             )}
 
-            {weeklyPointsH2H.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Points by Week</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1 text-sm">
-                    <div className="grid grid-cols-3 font-semibold text-xs text-muted-foreground pb-1">
-                      <span>Week</span>
-                      <span className="text-center">You</span>
-                      <span className="text-center">{(viewingUser?.name || "Them").split(" ")[0]}</span>
-                    </div>
-                    {weeklyPointsH2H.map((w) => (
-                      <div key={w.week} className="grid grid-cols-3 py-1 border-t border-border/40">
-                        <span>Wk {w.week}</span>
-                        <span className="text-center font-medium">{w.myPts}</span>
-                        <span className="text-center font-medium">{w.theirPts}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Your Projected Top 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {myProjected.top4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Their Projected Top 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {theirProjected.top4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Your Projected Last 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {myProjected.bottom4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Their Projected Last 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {theirProjected.bottom4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+            {/* Records + Rank */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">You</p>
+                <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
+                <p className="text-xs mt-1 font-medium">
+                  {h2hStats?.myTotal ?? 0} pts · Rank {h2hStats?.myRank ?? "—"}
+                </p>
+              </div>
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
+                <p className="text-xs mt-1 font-medium">
+                  {h2hStats?.theirTotal ?? 0} pts · Rank {h2hStats?.theirRank ?? "—"}
+                </p>
+              </div>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground pt-2">
-              Screenshot this card to share your head-to-head
+            {/* H2H week record */}
+            {h2hStats && (
+              <div className="rounded-xl border bg-primary/5 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Head-to-Head Weeks</p>
+                <p className="text-xl font-bold mt-0.5">
+                  You {h2hStats.myWeekWins} – {h2hStats.theirWeekWins} Them
+                  {h2hStats.ties > 0 && <span className="text-sm font-normal text-muted-foreground"> ({h2hStats.ties} tie{h2hStats.ties > 1 ? "s" : ""})</span>}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {h2hStats.pointDiff > 0 ? `You +${h2hStats.pointDiff}` : h2hStats.pointDiff < 0 ? `Them +${-h2hStats.pointDiff}` : "Even"} pts overall
+                </p>
+              </div>
+            )}
+
+            {differCount > 0 && (
+              <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Differ on {differCount} of {matches?.length ?? 272} games
+              </p>
+            )}
+
+            {/* Biggest gap */}
+            {h2hStats && h2hStats.biggestGap.diff > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Biggest week gap: <span className="font-semibold text-foreground">Week {h2hStats.biggestGap.week}</span> by {h2hStats.biggestGap.diff} pts
+                ({h2hStats.biggestGap.winner === "me" ? "You" : "Them"})
+              </p>
+            )}
+
+            {/* Weekly points bar chart */}
+            {weeklyPointsH2H.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Points by Week</p>
+                <div className="space-y-1.5">
+                  {weeklyPointsH2H.map((w) => {
+                    const max = Math.max(w.myPts, w.theirPts, 1);
+                    return (
+                      <div key={w.week} className="flex items-center gap-2 text-xs">
+                        <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
+                        <div className="flex-1 flex items-center gap-1">
+                          <div className="flex-1 h-4 bg-secondary/60 rounded overflow-hidden flex justify-end">
+                            <div
+                              className="h-full bg-primary rounded-r"
+                              style={{ width: `${(w.myPts / max) * 100}%` }}
+                            />
+                          </div>
+                          <div className="flex-1 h-4 bg-secondary/60 rounded overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-l"
+                              style={{ width: `${(w.theirPts / max) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="w-12 text-right tabular-nums font-medium">{w.myPts}-{w.theirPts}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-center gap-4 text-[10px] text-muted-foreground pt-1">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> You</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Them</span>
+                </div>
+              </div>
+            )}
+
+            {/* Projected teams with overlap highlight */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your Top 4</p>
+                {myProjected.top4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Their Top 4</p>
+                {theirProjected.top4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your Last 4</p>
+                {myProjected.bottom4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingBottom.includes(t.team) ? "text-destructive font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Their Last 4</p>
+                {theirProjected.bottom4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingBottom.includes(t.team) ? "text-destructive font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {(h2hStats?.overlappingTop.length ?? 0) > 0 && (
+              <p className="text-center text-[10px] text-primary font-medium">
+                Both have {h2hStats!.overlappingTop.join(", ")} in Top 4
+              </p>
+            )}
+            {(h2hStats?.overlappingBottom.length ?? 0) > 0 && (
+              <p className="text-center text-[10px] text-destructive font-medium">
+                Both have {h2hStats!.overlappingBottom.join(", ")} in Last 4
+              </p>
+            )}
+
+            <p className="text-center text-[10px] text-muted-foreground pt-1">
+              Screenshot to share
             </p>
           </div>
         </DialogContent>
@@ -1498,130 +1614,173 @@ export default function Picks() {
 
       {/* Head-to-Head Share Graphic */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-6 space-y-6" id="h2h-share-graphic">
-            <DialogHeader className="text-center">
-              <DialogTitle className="text-2xl font-bold">
-                You vs {viewingUser?.name || "Them"}
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground">Head-to-Head Snapshot</p>
-            </DialogHeader>
-
-            {/* Records */}
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground">You</p>
-                  <p className="text-3xl font-bold">{myRecord.correct}-{myRecord.wrong}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {leaderboard?.find(e => e.userId === user?.id)?.totalPoints ?? 0} pts
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-xs text-muted-foreground">{(viewingUser?.name || "Them").split(" ")[0]}</p>
-                  <p className="text-3xl font-bold">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {viewingUser?.totalPoints ?? 0} pts
-                  </p>
-                </CardContent>
-              </Card>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
+          <div className="p-5 space-y-4" id="h2h-share-graphic">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-black tracking-tight">
+                You <span className="text-muted-foreground font-normal">vs</span> {(viewingUser?.name || "Them").split(" ")[0]}
+              </h2>
+              {h2hStats && (
+                <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
+              )}
             </div>
 
-            {differCount > 0 && (
-              <div className="text-center text-sm text-amber-600 dark:text-amber-400 font-medium">
-                Differ on {differCount} of {matches?.length ?? 272} games
+            {/* Season progress */}
+            {h2hStats && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                  <span>Season progress</span>
+                  <span>{h2hStats.completedWeeks} of {h2hStats.totalWeeks} weeks</span>
+                </div>
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${(h2hStats.completedWeeks / h2hStats.totalWeeks) * 100}%` }}
+                  />
+                </div>
               </div>
             )}
 
-            {/* Weekly Points */}
-            {weeklyPointsH2H.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Points by Week</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1 text-sm">
-                    <div className="grid grid-cols-3 font-semibold text-xs text-muted-foreground pb-1">
-                      <span>Week</span>
-                      <span className="text-center">You</span>
-                      <span className="text-center">{(viewingUser?.name || "Them").split(" ")[0]}</span>
-                    </div>
-                    {weeklyPointsH2H.map((w) => (
-                      <div key={w.week} className="grid grid-cols-3 py-1 border-t border-border/40">
-                        <span>Wk {w.week}</span>
-                        <span className="text-center font-medium">{w.myPts}</span>
-                        <span className="text-center font-medium">{w.theirPts}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Projected Top 4 / Bottom 4 */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Your Projected Top 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {myProjected.top4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Their Projected Top 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {theirProjected.top4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Your Projected Last 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {myProjected.bottom4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Their Projected Last 4</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {theirProjected.bottom4.map((t) => (
-                    <div key={t.team} className="flex items-center gap-2 text-sm">
-                      <TeamLogo team={t.team} size={20} />
-                      <span className="font-medium">{t.team}</span>
-                      <span className="ml-auto text-muted-foreground">{t.wins}-{t.losses}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+            {/* Records + Rank */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">You</p>
+                <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
+                <p className="text-xs mt-1 font-medium">
+                  {h2hStats?.myTotal ?? 0} pts · Rank {h2hStats?.myRank ?? "—"}
+                </p>
+              </div>
+              <div className="rounded-xl border bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
+                <p className="text-xs mt-1 font-medium">
+                  {h2hStats?.theirTotal ?? 0} pts · Rank {h2hStats?.theirRank ?? "—"}
+                </p>
+              </div>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground pt-2">
-              Screenshot this card to share your head-to-head
+            {/* H2H week record */}
+            {h2hStats && (
+              <div className="rounded-xl border bg-primary/5 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Head-to-Head Weeks</p>
+                <p className="text-xl font-bold mt-0.5">
+                  You {h2hStats.myWeekWins} – {h2hStats.theirWeekWins} Them
+                  {h2hStats.ties > 0 && <span className="text-sm font-normal text-muted-foreground"> ({h2hStats.ties} tie{h2hStats.ties > 1 ? "s" : ""})</span>}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {h2hStats.pointDiff > 0 ? `You +${h2hStats.pointDiff}` : h2hStats.pointDiff < 0 ? `Them +${-h2hStats.pointDiff}` : "Even"} pts overall
+                </p>
+              </div>
+            )}
+
+            {differCount > 0 && (
+              <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Differ on {differCount} of {matches?.length ?? 272} games
+              </p>
+            )}
+
+            {/* Biggest gap */}
+            {h2hStats && h2hStats.biggestGap.diff > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Biggest week gap: <span className="font-semibold text-foreground">Week {h2hStats.biggestGap.week}</span> by {h2hStats.biggestGap.diff} pts
+                ({h2hStats.biggestGap.winner === "me" ? "You" : "Them"})
+              </p>
+            )}
+
+            {/* Weekly points bar chart */}
+            {weeklyPointsH2H.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Points by Week</p>
+                <div className="space-y-1.5">
+                  {weeklyPointsH2H.map((w) => {
+                    const max = Math.max(w.myPts, w.theirPts, 1);
+                    return (
+                      <div key={w.week} className="flex items-center gap-2 text-xs">
+                        <span className="w-8 shrink-0 text-muted-foreground font-medium">W{w.week}</span>
+                        <div className="flex-1 flex items-center gap-1">
+                          <div className="flex-1 h-4 bg-secondary/60 rounded overflow-hidden flex justify-end">
+                            <div
+                              className="h-full bg-primary rounded-r"
+                              style={{ width: `${(w.myPts / max) * 100}%` }}
+                            />
+                          </div>
+                          <div className="flex-1 h-4 bg-secondary/60 rounded overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 rounded-l"
+                              style={{ width: `${(w.theirPts / max) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="w-12 text-right tabular-nums font-medium">{w.myPts}-{w.theirPts}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-center gap-4 text-[10px] text-muted-foreground pt-1">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> You</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Them</span>
+                </div>
+              </div>
+            )}
+
+            {/* Projected teams with overlap highlight */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your Top 4</p>
+                {myProjected.top4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Their Top 4</p>
+                {theirProjected.top4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingTop.includes(t.team) ? "text-primary font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Your Last 4</p>
+                {myProjected.bottom4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingBottom.includes(t.team) ? "text-destructive font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Their Last 4</p>
+                {theirProjected.bottom4.map((t) => (
+                  <div key={t.team} className={`flex items-center gap-1.5 text-xs ${h2hStats?.overlappingBottom.includes(t.team) ? "text-destructive font-semibold" : ""}`}>
+                    <TeamLogo team={t.team} size={16} />
+                    <span>{t.team}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{t.wins}-{t.losses}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {(h2hStats?.overlappingTop.length ?? 0) > 0 && (
+              <p className="text-center text-[10px] text-primary font-medium">
+                Both have {h2hStats!.overlappingTop.join(", ")} in Top 4
+              </p>
+            )}
+            {(h2hStats?.overlappingBottom.length ?? 0) > 0 && (
+              <p className="text-center text-[10px] text-destructive font-medium">
+                Both have {h2hStats!.overlappingBottom.join(", ")} in Last 4
+              </p>
+            )}
+
+            <p className="text-center text-[10px] text-muted-foreground pt-1">
+              Screenshot to share
             </p>
           </div>
         </DialogContent>

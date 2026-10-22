@@ -225,12 +225,25 @@
   html {
     height: 100%;
     background-color: hsl(var(--background));
+    /* Better touch reliability in iOS standalone / Add to Home Screen */
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
     min-height: 100%;
     /* Fill the status-bar / notch area so it is not click-through in standalone mode */
     background-color: hsl(var(--background));
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* Allow text selection in inputs and content areas */
+  input, textarea, [contenteditable], .selectable {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 

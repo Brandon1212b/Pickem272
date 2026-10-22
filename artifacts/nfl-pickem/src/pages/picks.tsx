@@ -285,12 +285,13 @@ export default function Picks() {
     const stats: Record<string, { correct: number; total: number }> = {};
     for (const match of matches) {
       if (!match.isCompleted || !match.winner) continue;
+      const teams = [match.homeTeam, match.awayTeam];
       const pick = pickList.find((p) => p.matchId === match.id);
-      if (!pick?.selectedTeam) continue;
-      const team = pick.selectedTeam;
-      if (!stats[team]) stats[team] = { correct: 0, total: 0 };
-      stats[team].total += 1;
-      if (pick.selectedTeam === match.winner) stats[team].correct += 1;
+      for (const team of teams) {
+        if (!stats[team]) stats[team] = { correct: 0, total: 0 };
+        stats[team].total += 1;
+        if (pick?.selectedTeam === match.winner) stats[team].correct += 1;
+      }
     }
     const sorted = Object.entries(stats)
       .map(([team, s]) => ({ team, ...s, pct: s.total > 0 ? s.correct / s.total : 0 }))

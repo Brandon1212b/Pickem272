@@ -136,21 +136,27 @@ export default function Picks() {
     setSharing(true);
     try {
       const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(el, { backgroundColor: null, scale: 2 });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], "h2h.png", { type: "image/png" });
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: "H2H Pick'em" });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "h2h.png";
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+      const canvas = await html2canvas(el, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
       });
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), "image/png");
+      });
+      if (!blob) throw new Error("Failed to create image blob");
+      const file = new File([blob], "h2h.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "H2H Pick'em" });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "h2h.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Could not generate image");

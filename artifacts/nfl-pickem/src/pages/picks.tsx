@@ -1143,15 +1143,38 @@ export default function Picks() {
 
         {teamFilterControl}
 
+        {/* Overall accuracy (in-season) */}
+        {status?.mode === "in-season" && (
+          <div className="flex items-center justify-between rounded-xl border bg-card px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground">Season accuracy</span>
+            <span className="text-sm font-semibold tabular-nums">
+              {myRecord.total > 0
+                ? `${myRecord.correct}-${myRecord.wrong} · ${Math.round((myRecord.correct / myRecord.total) * 100)}%`
+                : "No decided games yet"}
+            </span>
+          </div>
+        )}
+
+        {/* Compact team schedule when filtering by team in-season */}
+        {status?.mode === "in-season" && teamFilterActive && (
+          <InSeasonTeamSchedule
+            team={selectedTeamFilter}
+            matches={Object.values(filteredMatchesByWeek).flat()}
+            myPicks={leftEffectivePicks ?? []}
+            comparePicks={isComparing ? viewingPicks : null}
+            compareName={isComparing ? viewingUser?.name : null}
+          />
+        )}
+
         <div id="week-list" className="space-y-3">
         {/* Current week */}
-        {currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
+        {!(status?.mode === "in-season" && teamFilterActive) && currentWeekEntry && renderWeekCard(currentWeekEntry.week, currentWeekEntry.matches, true)}
 
         {/* Past weeks — most recent first */}
-        {pastWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
+        {!(status?.mode === "in-season" && teamFilterActive) && pastWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}
 
         {/* Future weeks — collapsed section (all weeks shown when team filter active) */}
-        {futureWeekEntries.length > 0 && (
+        {!(status?.mode === "in-season" && teamFilterActive) && futureWeekEntries.length > 0 && (
           teamFilterActive ? (
             <div className="space-y-3">
               {futureWeekEntries.map(({ week, matches: wm }) => renderWeekCard(week, wm))}

@@ -1131,12 +1131,12 @@ export default function Picks() {
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <div className="flex justify-start">
+                  <div className="flex justify-end">
                     <Select
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1149,12 +1149,12 @@ export default function Picks() {
                     </Select>
                   </div>
                   <span className="text-muted-foreground font-normal px-2">vs</span>
-                  <div className="flex justify-end">
+                  <div className="flex justify-start">
                     <Select
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1876,12 +1876,12 @@ export default function Picks() {
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <div className="flex justify-start">
+                  <div className="flex justify-end">
                     <Select
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1894,12 +1894,12 @@ export default function Picks() {
                     </Select>
                   </div>
                   <span className="text-muted-foreground font-normal px-2">vs</span>
-                  <div className="flex justify-end">
+                  <div className="flex justify-start">
                     <Select
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>

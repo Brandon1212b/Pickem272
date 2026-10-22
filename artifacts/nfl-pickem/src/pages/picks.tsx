@@ -130,6 +130,31 @@ export default function Picks() {
   const [showH2HShare, setShowH2HShare] = useState(false);
 
   const [sharing, setSharing] = useState(false);
+  // Convert cross-origin images (team logos) to data URLs so they embed in the capture
+  const inlineImages = async (root: HTMLElement) => {
+    const imgs = Array.from(root.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map(async (img) => {
+        const src = img.src;
+        if (!src || src.startsWith("data:")) return;
+        try {
+          const res = await fetch(src, { mode: "cors" });
+          if (!res.ok) return;
+          const blob = await res.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          img.src = dataUrl;
+        } catch {
+          // leave original src if fetch fails
+        }
+      }),
+    );
+  };
+
   const handleShareImage = async () => {
     const el =
       document.getElementById("h2h-share-graphic-locked") ||
@@ -140,11 +165,11 @@ export default function Picks() {
     }
     setSharing(true);
     try {
-      // Small delay so images / fonts settle
-      await new Promise((r) => setTimeout(r, 200));
+      // Inline logos so they survive the capture (CORS)
+      await inlineImages(el);
+      await new Promise((r) => setTimeout(r, 100));
 
       const { toBlob } = await import("html-to-image");
-      // Capture the real background (don't force white)
       const bg = window.getComputedStyle(el).backgroundColor || undefined;
       const blob = await toBlob(el, {
         backgroundColor: bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" ? bg : undefined,

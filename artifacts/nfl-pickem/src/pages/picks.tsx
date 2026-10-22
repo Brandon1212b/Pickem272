@@ -1136,7 +1136,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="rounded-full border border-border bg-secondary/50 px-3 py-1 h-auto text-base font-semibold text-blue-500 shadow-none focus:ring-0 hover:bg-secondary">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1154,7 +1154,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="rounded-full border border-border bg-secondary/50 px-3 py-1 h-auto text-base font-semibold text-orange-500 shadow-none focus:ring-0 hover:bg-secondary">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1880,7 +1880,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="rounded-full border border-border bg-secondary/50 px-3 py-1 h-auto text-base font-semibold text-blue-500 shadow-none focus:ring-0 hover:bg-secondary">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1898,7 +1898,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="rounded-full border border-border bg-secondary/50 px-3 py-1 h-auto text-base font-semibold text-orange-500 shadow-none focus:ring-0 hover:bg-secondary">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>

@@ -103,6 +103,12 @@ function getTeamSpread(pointSpread: string | null | undefined, team: "home" | "a
   return val > 0 ? `+${val}` : `${val}`;
 }
 
+
+function truncateName(name: string, max = 10): string {
+  const first = name.trim().split(/\s+/)[0] || name;
+  return first.length > max ? first.slice(0, max - 1) + "…" : first;
+}
+
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -122,6 +128,37 @@ export default function Picks() {
   const [leftPlayerId, setLeftPlayerId] = useState<number | null>(null); // null means current user
   const [showOnlyDiffers, setShowOnlyDiffers] = useState(false);
   const [showH2HShare, setShowH2HShare] = useState(false);
+
+  const [sharing, setSharing] = useState(false);
+  const handleShareImage = async () => {
+    const el = document.getElementById("h2h-share-graphic");
+    if (!el) return;
+    setSharing(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, { backgroundColor: null, scale: 2 });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "h2h.png", { type: "image/png" });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: "H2H Pick'em" });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "h2h.png";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error("Could not generate image");
+    } finally {
+      setSharing(false);
+    }
+  };
+
 
   const { data: status, isLoading: loadingStatus } = useGetSeasonStatus();
   const { data: matches, isLoading: loadingMatches } = useListMatches(undefined, {
@@ -242,6 +279,33 @@ export default function Picks() {
   };
   const myProjected = useMemo(() => computeProjected(leftEffectivePicks), [matches, leftEffectivePicks]);
   const theirProjected = useMemo(() => computeProjected(viewingPicks), [matches, viewingPicks]);
+  // Accuracy by team for completed games (most/least accurate picks)
+  const computeAccuracyTeams = (pickList: typeof picks) => {
+    if (!matches || !pickList) return { mostAccurate: [], leastAccurate: [] };
+    const stats: Record<string, { correct: number; total: number }> = {};
+    for (const match of matches) {
+      if (!match.isCompleted || !match.winner) continue;
+      const teams = [match.homeTeam, match.awayTeam];
+      const pick = pickList.find((p) => p.matchId === match.id);
+      for (const team of teams) {
+        if (!stats[team]) stats[team] = { correct: 0, total: 0 };
+        stats[team].total += 1;
+        if (pick?.selectedTeam === match.winner) stats[team].correct += 1;
+      }
+    }
+    const sorted = Object.entries(stats)
+      .map(([team, s]) => ({ team, ...s, pct: s.total > 0 ? s.correct / s.total : 0 }))
+      .filter((s) => s.total >= 1)
+      .sort((a, b) => b.pct - a.pct || b.correct - a.correct || b.total - a.total);
+    return {
+      mostAccurate: sorted.slice(0, 4),
+      leastAccurate: sorted.slice(-4).reverse(),
+    };
+  };
+  const myAccuracy = useMemo(() => computeAccuracyTeams(leftEffectivePicks), [matches, leftEffectivePicks]);
+  const theirAccuracy = useMemo(() => computeAccuracyTeams(viewingPicks), [matches, viewingPicks]);
+
+
 
   // Extra H2H stats for the snapshot
   const h2hStats = useMemo(() => {
@@ -841,7 +905,7 @@ export default function Picks() {
                     </span>
                     <span>·</span>
                     <span className="font-medium text-foreground">
-                      {(viewingUser?.name || "Them").split(" ")[0]} {theirRecord.correct}-{theirRecord.wrong}
+                      {truncateName(viewingUser?.name || "Them")} {theirRecord.correct}-{theirRecord.wrong}
                     </span>
                     {differCount > 0 && (
                       <>
@@ -863,7 +927,7 @@ export default function Picks() {
                 value={leaderboard?.some(e => e.userId === viewingUserId) ? String(viewingUserId) : "me"}
                 onValueChange={(v) => setViewingUserId(v === "me" ? null : Number(v))}
               >
-                <SelectTrigger className="w-[160px] h-8 text-xs ring-2 ring-primary/40 shadow-[0_0_12px_rgba(59,130,246,0.4)]">
+                <SelectTrigger className="w-[160px] h-8 text-xs rounded-full border border-border bg-secondary/50 shadow-none">
                   <SelectValue placeholder="Compare with..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1066,37 +1130,43 @@ export default function Picks() {
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
-                <Select
-                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
-                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
-                >
-                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
-                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaderboard?.map((e) => (
-                      <SelectItem key={e.userId} value={String(e.userId)}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-muted-foreground font-normal"> vs </span>
-                <Select
-                  value={viewingUserId ? String(viewingUserId) : ""}
-                  onValueChange={(v) => setViewingUserId(Number(v))}
-                >
-                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
-                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
-                      <SelectItem key={e.userId} value={String(e.userId)}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div className="flex justify-end">
+                    <Select
+                      value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                      onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                    >
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                        <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leaderboard?.map((e) => (
+                          <SelectItem key={e.userId} value={String(e.userId)}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="text-muted-foreground font-normal px-2">vs</span>
+                  <div className="flex justify-start">
+                    <Select
+                      value={viewingUserId ? String(viewingUserId) : ""}
+                      onValueChange={(v) => setViewingUserId(Number(v))}
+                    >
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                        <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
+                          <SelectItem key={e.userId} value={String(e.userId)}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </h2>
               {h2hStats && (
                 <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
@@ -1157,7 +1227,7 @@ export default function Picks() {
             {/* Records + Rank */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{truncateName(leftUser?.name || user?.name || "You")}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
@@ -1169,7 +1239,7 @@ export default function Picks() {
                 </p>
               </div>
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{truncateName(viewingUser?.name || "Them")}</p>
                 <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.theirRank ?? "—"}
@@ -1195,9 +1265,11 @@ export default function Picks() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                   <span className="w-8 shrink-0" />
-                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
-                  <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
-                  <span className="w-12" />
+                  <div className="flex-1 flex items-center gap-1">
+                    <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
+                    <span className="text-muted-foreground font-normal text-[9px] px-0.5">vs</span>
+                    <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
+                  </div>
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
@@ -1232,6 +1304,81 @@ export default function Picks() {
                 })}
               </div>
             )}
+
+            {/* Most / Least Accurate Picks */}
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Most Accurate Picks</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Best 4</p>
+                  {myAccuracy.mostAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Worst 4</p>
+                  {myAccuracy.leastAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Best 4</p>
+                  {theirAccuracy.mostAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Worst 4</p>
+                  {theirAccuracy.leastAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Projected teams — all in one row */}
             <div className="space-y-2">
@@ -1289,6 +1436,19 @@ export default function Picks() {
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
+
+            <div className="flex justify-center pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleShareImage}
+                disabled={sharing}
+                className="gap-1.5"
+              >
+                {sharing ? "Generating…" : "Share Image"}
+              </Button>
+            </div>
+
           </div>
         </DialogContent>
       </Dialog>
@@ -1715,37 +1875,43 @@ export default function Picks() {
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
-                <Select
-                  value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
-                  onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
-                >
-                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-blue-500 shadow-none focus:ring-0 hover:underline">
-                    <SelectValue>{(leftUser?.name || user?.name || "You").split(" ")[0]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaderboard?.map((e) => (
-                      <SelectItem key={e.userId} value={String(e.userId)}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-muted-foreground font-normal"> vs </span>
-                <Select
-                  value={viewingUserId ? String(viewingUserId) : ""}
-                  onValueChange={(v) => setViewingUserId(Number(v))}
-                >
-                  <SelectTrigger className="inline-flex w-auto h-auto border-0 bg-transparent p-0 text-2xl font-black text-orange-500 shadow-none focus:ring-0 hover:underline">
-                    <SelectValue>{(viewingUser?.name || "Them").split(" ")[0]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
-                      <SelectItem key={e.userId} value={String(e.userId)}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div className="flex justify-end">
+                    <Select
+                      value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
+                      onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
+                    >
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                        <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leaderboard?.map((e) => (
+                          <SelectItem key={e.userId} value={String(e.userId)}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="text-muted-foreground font-normal px-2">vs</span>
+                  <div className="flex justify-start">
+                    <Select
+                      value={viewingUserId ? String(viewingUserId) : ""}
+                      onValueChange={(v) => setViewingUserId(Number(v))}
+                    >
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                        <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leaderboard?.filter((e) => e.userId !== (leftPlayerId ?? user?.id)).map((e) => (
+                          <SelectItem key={e.userId} value={String(e.userId)}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </h2>
               {h2hStats && (
                 <p className="text-sm font-medium text-foreground">{h2hStats.story}</p>
@@ -1806,7 +1972,7 @@ export default function Picks() {
             {/* Records + Rank */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{(leftUser?.name || user?.name || "You").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-semibold">{truncateName(leftUser?.name || user?.name || "You")}</p>
                 <p className="text-3xl font-black leading-none mt-1">{myRecord.correct}-{myRecord.wrong}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.myRank ?? "—"}
@@ -1818,7 +1984,7 @@ export default function Picks() {
                 </p>
               </div>
               <div className="rounded-xl border bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{(viewingUser?.name || "Them").split(" ")[0]}</p>
+                <p className="text-[10px] uppercase tracking-wider text-orange-500 font-semibold">{truncateName(viewingUser?.name || "Them")}</p>
                 <p className="text-3xl font-black leading-none mt-1">{theirRecord?.correct ?? 0}-{theirRecord?.wrong ?? 0}</p>
                 <p className="text-xs mt-1 font-medium text-muted-foreground flex items-center justify-center gap-1">
                   Rank {h2hStats?.theirRank ?? "—"}
@@ -1844,9 +2010,11 @@ export default function Picks() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                   <span className="w-8 shrink-0" />
-                  <span className="flex-1 text-center text-blue-500">{(leftUser?.name || user?.name || "You").split(" ")[0]}</span>
-                  <span className="flex-1 text-center text-orange-500">{(viewingUser?.name || "Them").split(" ")[0]}</span>
-                  <span className="w-12" />
+                  <div className="flex-1 flex items-center gap-1">
+                    <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
+                    <span className="text-muted-foreground font-normal text-[9px] px-0.5">vs</span>
+                    <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
+                  </div>
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
@@ -1881,6 +2049,81 @@ export default function Picks() {
                 })}
               </div>
             )}
+
+            {/* Most / Least Accurate Picks */}
+            <div className="space-y-2">
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Most Accurate Picks</p>
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Best 4</p>
+                  {myAccuracy.mostAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-blue-500 text-center">Worst 4</p>
+                  {myAccuracy.leastAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Best 4</p>
+                  {theirAccuracy.mostAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="font-semibold uppercase tracking-wider text-orange-500 text-center">Worst 4</p>
+                  {theirAccuracy.leastAccurate.map((t) => (
+                    <div key={t.team} className="flex justify-center">
+                      <div className="flex items-center gap-1">
+                        <TeamLogo team={t.team} size={20} />
+                        <span className={cn(
+                        "tabular-nums font-medium",
+                        t.total === 0 ? "text-muted-foreground" :
+                        (t.correct / t.total) >= 0.7 ? "text-green-500" :
+                        (t.correct / t.total) >= 0.5 ? "text-amber-500" :
+                        "text-red-500"
+                      )}>{t.correct} of {t.total}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Projected teams — all in one row */}
             <div className="space-y-2">
@@ -1938,10 +2181,24 @@ export default function Picks() {
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
+
+            <div className="flex justify-center pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleShareImage}
+                disabled={sharing}
+                className="gap-1.5"
+              >
+                {sharing ? "Generating…" : "Share Image"}
+              </Button>
+            </div>
+
           </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
 

@@ -466,6 +466,29 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     };
   }).filter((u) => u.totalResolved > 0);
 
+
+  // Prime time games: Thursday, Sunday night, Monday night
+  const isPrimeTime = (gameTime: string | null | undefined): boolean => {
+    if (!gameTime) return false;
+    const t = gameTime.toLowerCase();
+    return t.includes("thu") || t.includes("mon") || (t.includes("sun") && (t.includes("8:") || t.includes("7:") || t.includes("night")));
+  };
+
+  const primeTimeMatches = completedMatches.filter((m) => isPrimeTime(m.gameTime));
+  const primeTimeIds = new Set(primeTimeMatches.map((m) => m.id));
+
+  // Add primeTimeCorrect to user stats
+  for (const u of userStats) {
+    const userPicks = picks.filter((p) => p.userId === u.userId);
+    const primePicks = userPicks.filter((p) => primeTimeIds.has(p.matchId));
+    const primeCorrect = primePicks.filter((p) => {
+      const m = primeTimeMatches.find((m) => m.id === p.matchId);
+      return m && p.selectedTeam === m.winner;
+    });
+    (u as any).primeTimeCorrect = primeCorrect.length;
+    (u as any).primeTimeTotal = primePicks.length;
+  }
+
   const achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[] = [];
 
   // Most accurate picker
@@ -540,6 +563,26 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byNfc[0].avatar,
       value: byNfc[0].nfcPct,
       detail: `${byNfc[0].nfcCorrect}/${byNfc[0].nfcResolved} correct on NFC games — ${byNfc[0].nfcPct}%`,
+    });
+  }
+
+
+  // Prime Time King
+  const byPrime = [...userStats].filter((u: any) => (u.primeTimeTotal ?? 0) >= 1).sort((a: any, b: any) => (b.primeTimeCorrect ?? 0) - (a.primeTimeCorrect ?? 0));
+  if (byPrime[0] && (byPrime[0] as any).primeTimeCorrect > 0) {
+    const top = (byPrime[0] as any).primeTimeCorrect;
+    const tied = byPrime.filter((u: any) => (u.primeTimeCorrect ?? 0) === top);
+    const names = tied.map((u) => u.name).join(", ");
+    achievements.push({
+      type: "mr-primetime",
+      label: "Mr. Primetime",
+      userId: tied[0].userId,
+      name: names,
+      avatar: tied.length === 1 ? tied[0].avatar : null,
+      value: top,
+      detail: tied.length === 1
+        ? `${top} correct TNF/SNF/MNF picks`
+        : `Tied with ${top} correct TNF/SNF/MNF picks`,
     });
   }
 

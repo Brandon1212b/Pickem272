@@ -131,35 +131,58 @@ export default function Picks() {
 
   const [sharing, setSharing] = useState(false);
   const handleShareImage = async () => {
-    const el = document.getElementById("h2h-share-graphic");
-    if (!el) return;
+    // Prefer the currently visible graphic (there are two dialogs)
+    const el =
+      document.getElementById("h2h-share-graphic-locked") ||
+      document.getElementById("h2h-share-graphic-edit");
+    if (!el) {
+      toast.error("Share graphic not found");
+      return;
+    }
     setSharing(true);
     try {
+      // Give images a moment to finish loading
+      await new Promise((r) => setTimeout(r, 150));
+
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(el, {
-        backgroundColor: null,
+        backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
         allowTaint: false,
+        logging: false,
+        imageTimeout: 8000,
       });
+
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob((b) => resolve(b), "image/png");
       });
-      if (!blob) throw new Error("Failed to create image blob");
+      if (!blob || blob.size < 100) throw new Error("Generated image was empty");
+
       const file = new File([blob], "h2h.png", { type: "image/png" });
+
+      // Prefer native share when available (especially iOS)
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "H2H Pick'em" });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "h2h.png";
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+          await navigator.share({ files: [file], title: "H2H Pick'em" });
+          return;
+        } catch (shareErr: any) {
+          // User cancelled is fine; other errors fall through to download
+          if (shareErr?.name === "AbortError") return;
+          console.warn("Share failed, falling back to download", shareErr);
+        }
       }
-    } catch (e) {
+
+      // Fallback: download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "h2h.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
       console.error(e);
-      toast.error("Could not generate image");
+      toast.error(e?.message || "Could not generate image");
     } finally {
       setSharing(false);
     }
@@ -1132,7 +1155,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic (available in locked view) */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic">
+          <div className="p-5 space-y-4" id="h2h-share-graphic-locked">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
@@ -1877,7 +1900,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic">
+          <div className="p-5 space-y-4" id="h2h-share-graphic-edit">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">

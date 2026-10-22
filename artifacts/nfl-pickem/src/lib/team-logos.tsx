@@ -24,6 +24,7 @@ export function TeamLogo({ team, size = 32, className = "" }: { team: string; si
       alt={team}
       width={size}
       height={size}
+      crossOrigin="anonymous"
       className={`object-contain ${className}`}
       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
     />

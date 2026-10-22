@@ -1131,7 +1131,7 @@ export default function Picks() {
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <div className="flex justify-end">
+                  <div className="flex justify-start">
                     <Select
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
@@ -1149,7 +1149,7 @@ export default function Picks() {
                     </Select>
                   </div>
                   <span className="text-muted-foreground font-normal px-2">vs</span>
-                  <div className="flex justify-start">
+                  <div className="flex justify-end">
                     <Select
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
@@ -1263,12 +1263,14 @@ export default function Picks() {
             {/* Weekly points bar chart */}
             {weeklyPointsH2H.length > 0 && (
               <div className="space-y-1.5">
-                <div className="grid grid-cols-[2rem_1fr_auto_1fr_3rem] items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
-                  <span />
-                  <span className="text-right text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
-                  <span className="text-muted-foreground font-normal px-1">vs</span>
-                  <span className="text-left text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
-                  <span />
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="w-8 shrink-0" />
+                  <div className="flex-1 flex items-center gap-1">
+                    <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
+                    <span className="text-muted-foreground font-normal text-[9px]">vs</span>
+                    <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
+                  </div>
+                  <span className="w-8 shrink-0" />
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
@@ -1875,7 +1877,7 @@ export default function Picks() {
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <div className="flex justify-end">
+                  <div className="flex justify-start">
                     <Select
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
@@ -1893,7 +1895,7 @@ export default function Picks() {
                     </Select>
                   </div>
                   <span className="text-muted-foreground font-normal px-2">vs</span>
-                  <div className="flex justify-start">
+                  <div className="flex justify-end">
                     <Select
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
@@ -2007,12 +2009,14 @@ export default function Picks() {
             {/* Weekly points bar chart */}
             {weeklyPointsH2H.length > 0 && (
               <div className="space-y-1.5">
-                <div className="grid grid-cols-[2rem_1fr_auto_1fr_3rem] items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
-                  <span />
-                  <span className="text-right text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
-                  <span className="text-muted-foreground font-normal px-1">vs</span>
-                  <span className="text-left text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
-                  <span />
+                <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="w-8 shrink-0" />
+                  <div className="flex-1 flex items-center gap-1">
+                    <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
+                    <span className="text-muted-foreground font-normal text-[9px]">vs</span>
+                    <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
+                  </div>
+                  <span className="w-8 shrink-0" />
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);

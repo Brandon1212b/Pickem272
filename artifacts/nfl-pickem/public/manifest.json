@@ -1,6 +1,6 @@
 {
-  "name": "Pick'em 272",
-  "short_name": "Pickem272",
+  "name": "272",
+  "short_name": "272",
   "description": "Predict the winner of every NFL game across the entire season (272 games total).",
   "start_url": "/",
   "scope": "/",

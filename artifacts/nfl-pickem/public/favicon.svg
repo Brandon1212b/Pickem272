@@ -1,3 +1,10 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <!-- Simple football shape -->
+  <ellipse cx="90" cy="90" rx="48" ry="32" fill="#FFFFFF"/>
+  <!-- Laces -->
+  <path d="M78 90 L102 90" stroke="#FF3C00" stroke-width="4" stroke-linecap="round"/>
+  <path d="M82 82 L82 98" stroke="#FF3C00" stroke-width="3" stroke-linecap="round"/>
+  <path d="M90 80 L90 100" stroke="#FF3C00" stroke-width="3" stroke-linecap="round"/>
+  <path d="M98 82 L98 98" stroke="#FF3C00" stroke-width="3" stroke-linecap="round"/>
 </svg>

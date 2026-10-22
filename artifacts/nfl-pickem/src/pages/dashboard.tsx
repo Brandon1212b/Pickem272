@@ -151,8 +151,8 @@ export default function Dashboard() {
   // null = default (active week), number = user-selected week
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedPickers, setSelectedPickers] = useState<{ team: string; names: string[] } | null>(null);
-  // null = show everyone; string = show only me + this person
-  const [compareWith, setCompareWith] = useState<string | null>(null);
+  // empty = show everyone; array = show only me + selected people
+  const [compareWith, setCompareWith] = useState<string[]>([]);
 
   const { data: status } = useGetSeasonStatus();
   const { data: allMatches } = useListMatches(undefined, {
@@ -229,8 +229,8 @@ export default function Dashboard() {
   );
 
   const filterNames = (names: string[]): string[] => {
-    if (!compareWith) return names;
-    const allowed = new Set([myName, compareWith]);
+    if (compareWith.length === 0) return names;
+    const allowed = new Set([myName, ...compareWith]);
     return names.filter((n) => allowed.has(n));
   };
 
@@ -309,15 +309,15 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Compare / filter people — tap a person to show only you + them */}
+          {/* Compare / filter people — tap people to show only you + them */}
           {otherPlayers.length > 0 && (
             <div className="mt-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Compare with
-                {compareWith && (
+                {compareWith.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setCompareWith(null)}
+                    onClick={() => setCompareWith([])}
                     className="ml-2 normal-case font-medium text-primary hover:underline"
                   >
                     Clear
@@ -326,12 +326,16 @@ export default function Dashboard() {
               </p>
               <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {otherPlayers.map((p) => {
-                  const active = compareWith === p.name;
+                  const active = compareWith.includes(p.name);
                   return (
                     <button
                       key={p.userId}
                       type="button"
-                      onClick={() => setCompareWith(active ? null : p.name)}
+                      onClick={() =>
+                        setCompareWith((prev) =>
+                          active ? prev.filter((n) => n !== p.name) : [...prev, p.name]
+                        )
+                      }
                       className={`flex items-center gap-1.5 flex-shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                         active
                           ? "border-primary bg-primary/15 text-primary"
@@ -490,7 +494,9 @@ export default function Dashboard() {
             <DialogTitle>{selectedPickers?.team} pickers</DialogTitle>
             <DialogDescription>
               {selectedPickers?.names.length ?? 0} player{selectedPickers?.names.length === 1 ? "" : "s"} picked this team.
-              {compareWith && " (showing you + " + compareWith + ")"}
+              {compareWith.length > 0 && (
+                <> (showing you + {compareWith.join(", ")})</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-72 overflow-y-auto space-y-2">

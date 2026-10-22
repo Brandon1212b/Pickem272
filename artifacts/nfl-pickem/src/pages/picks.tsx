@@ -182,7 +182,7 @@ export default function Picks() {
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: "H2H Pick'em" });
+          await navigator.share({ files: [file] });
           return;
         } catch (shareErr: any) {
           if (shareErr?.name === "AbortError") return;
@@ -1476,13 +1476,13 @@ export default function Picks() {
               </div>
             </div>
 
-          </div>
-
             {differCount > 0 && (
-              <p className="text-center text-xs text-muted-foreground pt-1 px-5">
+              <p className="text-center text-xs text-muted-foreground pt-1">
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
+
+          </div>
 
             <div className="flex justify-center pt-2 pb-4">
               <Button
@@ -2223,13 +2223,13 @@ export default function Picks() {
               </div>
             </div>
 
-          </div>
-
             {differCount > 0 && (
-              <p className="text-center text-xs text-muted-foreground pt-1 px-5">
+              <p className="text-center text-xs text-muted-foreground pt-1">
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
+
+          </div>
 
             <div className="flex justify-center pt-2 pb-4">
               <Button

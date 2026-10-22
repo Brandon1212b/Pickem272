@@ -1476,13 +1476,15 @@ export default function Picks() {
               </div>
             </div>
 
+          </div>
+
             {differCount > 0 && (
-              <p className="text-center text-xs text-muted-foreground pt-1">
+              <p className="text-center text-xs text-muted-foreground pt-1 px-5">
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
 
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-2 pb-4">
               <Button
                 size="sm"
                 variant="outline"
@@ -1494,7 +1496,7 @@ export default function Picks() {
               </Button>
             </div>
 
-          </div>
+          
         </DialogContent>
       </Dialog>
     </div>
@@ -2221,13 +2223,15 @@ export default function Picks() {
               </div>
             </div>
 
+          </div>
+
             {differCount > 0 && (
-              <p className="text-center text-xs text-muted-foreground pt-1">
+              <p className="text-center text-xs text-muted-foreground pt-1 px-5">
                 Differ on {differCount} of {matches?.length ?? 272} games
               </p>
             )}
 
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-2 pb-4">
               <Button
                 size="sm"
                 variant="outline"
@@ -2239,7 +2243,7 @@ export default function Picks() {
               </Button>
             </div>
 
-          </div>
+          
         </DialogContent>
       </Dialog>
     </div>

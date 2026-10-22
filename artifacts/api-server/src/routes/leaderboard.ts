@@ -574,8 +574,8 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const tied = byPrime.filter((u: any) => (u.primeTimeCorrect ?? 0) === top);
     const names = tied.map((u) => u.name).join(", ");
     achievements.push({
-      type: "night-owl",
-      label: "Night Owl",
+      type: "mr-primetime",
+      label: "Mr. Primetime",
       userId: tied[0].userId,
       name: names,
       avatar: tied.length === 1 ? tied[0].avatar : null,

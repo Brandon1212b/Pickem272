@@ -1136,7 +1136,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1154,7 +1154,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1267,10 +1267,9 @@ export default function Picks() {
                   <span className="w-8 shrink-0" />
                   <div className="flex-1 flex items-center gap-1">
                     <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
-                    <span className="text-muted-foreground font-normal text-[9px]">vs</span>
+                    <span className="text-muted-foreground font-normal text-[9px] px-0.5">vs</span>
                     <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
                   </div>
-                  <span className="w-8 shrink-0" />
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);
@@ -1882,7 +1881,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-blue-500 hover:bg-transparent justify-start gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1900,7 +1899,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
+                      <SelectTrigger className="w-auto border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-xl font-bold text-orange-500 hover:bg-transparent justify-end gap-0.5 [&_svg]:size-3.5 [&_svg]:opacity-70">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -2013,10 +2012,9 @@ export default function Picks() {
                   <span className="w-8 shrink-0" />
                   <div className="flex-1 flex items-center gap-1">
                     <span className="flex-1 text-center text-blue-500">{truncateName(leftUser?.name || user?.name || "You")}</span>
-                    <span className="text-muted-foreground font-normal text-[9px]">vs</span>
+                    <span className="text-muted-foreground font-normal text-[9px] px-0.5">vs</span>
                     <span className="flex-1 text-center text-orange-500">{truncateName(viewingUser?.name || "Them")}</span>
                   </div>
-                  <span className="w-8 shrink-0" />
                 </div>
                 {weeklyPointsH2H.map((w) => {
                   const max = Math.max(w.myPts, w.theirPts, 1);

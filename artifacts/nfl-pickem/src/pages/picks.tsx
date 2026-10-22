@@ -144,11 +144,12 @@ export default function Picks() {
       await new Promise((r) => setTimeout(r, 200));
 
       const { toBlob } = await import("html-to-image");
+      // Capture the real background (don't force white)
+      const bg = window.getComputedStyle(el).backgroundColor || undefined;
       const blob = await toBlob(el, {
-        backgroundColor: "#ffffff",
+        backgroundColor: bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" ? bg : undefined,
         pixelRatio: 2,
         cacheBust: true,
-        // html-to-image handles CORS better on iOS than html2canvas
       });
       if (!blob || blob.size < 100) throw new Error("Generated image was empty");
 
@@ -1145,7 +1146,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic (available in locked view) */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic-locked">
+          <div className="p-5 space-y-4 bg-background" id="h2h-share-graphic-locked">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
@@ -1890,7 +1891,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic-edit">
+          <div className="p-5 space-y-4 bg-background" id="h2h-share-graphic-edit">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">

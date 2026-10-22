@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useGetSeasonStatus, useLoginUser } from "@workspace/api-client-react";
+import { useGetSeasonStatus, useLoginUser, useGetLeaderboard } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { user, setUser, logout } = useAuth();
   const { data: seasonStatus } = useGetSeasonStatus();
+  const { data: leaderboard } = useGetLeaderboard();
   const seasonLocked = seasonStatus?.mode === "in-season";
   const postLoginPath = seasonLocked ? "/recap" : "/picks";
 
@@ -28,18 +29,18 @@ export default function Login() {
         toast.success(`Welcome, ${newUser.name}!`);
         setLocation(postLoginPath);
       },
-       onError: (error) => {
-         const statusCode =
-           typeof error === "object" && error !== null && "status" in error
-             ? (error as { status?: unknown }).status
-             : undefined;
-         if (seasonLocked && statusCode === 403) {
-           toast.error("Season is underway. Use the exact spelling of your existing team name.");
-         } else {
-           toast.error("Failed to join — try again.");
-         }
-      }
-    }
+      onError: (error) => {
+        const statusCode =
+          typeof error === "object" && error !== null && "status" in error
+            ? (error as { status?: unknown }).status
+            : undefined;
+        if (seasonLocked && statusCode === 403) {
+          toast.error("Season is underway. Pick your existing team name.");
+        } else {
+          toast.error("Failed to join — try again.");
+        }
+      },
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,18 +49,21 @@ export default function Login() {
     loginUser.mutate({ data: { name: name.trim() } });
   };
 
+  const handleSelectPlayer = (playerName: string) => {
+    setName(playerName);
+    loginUser.mutate({ data: { name: playerName } });
+  };
+
   // Already logged in — show "continue as" screen
   if (user && !switchingAccount) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-        {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
           <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
         </div>
 
         <div className="w-full max-w-sm relative z-10 space-y-6">
-          {/* Logo */}
           <div className="text-center">
             <div className="w-20 h-20 mx-auto bg-primary rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-2xl shadow-primary/30">
               🏈
@@ -68,7 +72,6 @@ export default function Login() {
             <p className="text-muted-foreground mt-1 text-sm">2026–27 NFL Season</p>
           </div>
 
-          {/* Continue as card */}
           <div className="bg-card border border-border/50 rounded-2xl p-6 space-y-5 shadow-xl shadow-black/20">
             <p className="text-center text-sm text-muted-foreground">You're signed in as</p>
             <div className="flex flex-col items-center gap-3">
@@ -104,17 +107,17 @@ export default function Login() {
     );
   }
 
+  const players = leaderboard ?? [];
+
   // Normal login / new user
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
       </div>
 
       <div className="w-full max-w-sm relative z-10 space-y-6">
-        {/* Logo + branding */}
         <div className="text-center">
           <div className="w-20 h-20 mx-auto bg-primary rounded-3xl flex items-center justify-center text-4xl mb-4 shadow-2xl shadow-primary/30">
             🏈
@@ -123,11 +126,12 @@ export default function Login() {
           <p className="text-muted-foreground mt-1 text-sm">2026–27 NFL Season</p>
         </div>
 
-        {/* Login card */}
         <div className="bg-card border border-border/50 rounded-2xl p-6 space-y-4 shadow-xl shadow-black/20">
           {switchingAccount && user && (
             <div className="bg-secondary/60 rounded-xl p-3 text-sm text-muted-foreground flex items-center justify-between">
-              <span>Switching from <strong className="text-foreground">{user.name}</strong></span>
+              <span>
+                Switching from <strong className="text-foreground">{user.name}</strong>
+              </span>
               <button
                 onClick={() => setSwitchingAccount(false)}
                 className="text-xs text-primary hover:underline"
@@ -146,35 +150,66 @@ export default function Login() {
             </h2>
             <p className="text-sm text-muted-foreground">
               {seasonLocked
-                ? "New team names are closed. Use the exact spelling of the name you used before to sign in."
+                ? "Pick your name from the list of active players."
                 : switchingAccount
                 ? "Type your name to switch accounts."
                 : "Enter your name to join or pick up where you left off."}
             </p>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <Input
-              placeholder={seasonLocked ? "Exact team name..." : "Your name..."}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-12 text-base px-4 bg-background"
-              disabled={loginUser.isPending}
-              autoFocus
-              data-testid="input-name"
-            />
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-semibold"
-              disabled={!name.trim() || loginUser.isPending}
-              data-testid="button-submit"
-            >
-              {loginUser.isPending ? "Signing in…" : seasonLocked ? "Sign In" : switchingAccount ? "Switch Account" : "Join League"}
-            </Button>
-          </form>
+
+          {seasonLocked ? (
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {players.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Loading players…</p>
+              ) : (
+                players.map((p) => (
+                  <button
+                    key={p.userId}
+                    type="button"
+                    disabled={loginUser.isPending}
+                    onClick={() => handleSelectPlayer(p.name)}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3 py-2.5 text-left transition-colors disabled:opacity-50"
+                  >
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: p.avatar ?? "#007AFF" }}
+                    >
+                      {getInitials(p.name)}
+                    </div>
+                    <span className="text-sm font-medium truncate">{p.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <Input
+                placeholder="Your name..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-12 text-base px-4 bg-background"
+                disabled={loginUser.isPending}
+                autoFocus
+                data-testid="input-name"
+              />
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
+                disabled={!name.trim() || loginUser.isPending}
+                data-testid="button-submit"
+              >
+                {loginUser.isPending ? "Signing in…" : switchingAccount ? "Switch Account" : "Join League"}
+              </Button>
+            </form>
+          )}
+
           {switchingAccount && (
             <button
               className="w-full text-sm text-destructive hover:text-destructive/80 text-center transition-colors py-1"
-              onClick={() => { logout(); setSwitchingAccount(false); }}
+              onClick={() => {
+                logout();
+                setSwitchingAccount(false);
+              }}
             >
               Sign out completely
             </button>
@@ -182,7 +217,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          {seasonLocked ? "Use the exact spelling of your existing team name." : "No password needed — just your name."}
+          {seasonLocked ? "Tap your name to sign in." : "No password needed — just your name."}
         </p>
       </div>
     </div>

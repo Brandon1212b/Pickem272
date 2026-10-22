@@ -1136,7 +1136,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-2xl font-black tracking-tight text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5 [&_svg]:size-4">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1154,7 +1154,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-2xl font-black tracking-tight text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5 [&_svg]:size-4">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1880,7 +1880,7 @@ export default function Picks() {
                       value={leftPlayerId ? String(leftPlayerId) : String(user?.id)}
                       onValueChange={(v) => setLeftPlayerId(v === String(user?.id) ? null : Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-2xl font-black tracking-tight text-blue-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5 [&_svg]:size-4">
                         <SelectValue>{truncateName(leftUser?.name || user?.name || "You")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -1898,7 +1898,7 @@ export default function Picks() {
                       value={viewingUserId ? String(viewingUserId) : ""}
                       onValueChange={(v) => setViewingUserId(Number(v))}
                     >
-                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-base font-semibold text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5">
+                      <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 px-0 py-0 h-auto text-2xl font-black tracking-tight text-orange-500 hover:bg-transparent [&_svg]:rounded-full [&_svg]:bg-secondary/50 [&_svg]:border [&_svg]:border-border [&_svg]:p-1 [&_svg]:ml-1.5 [&_svg]:size-4">
                         <SelectValue>{truncateName(viewingUser?.name || "Them")}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>

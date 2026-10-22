@@ -244,7 +244,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="min-h-[100dvh] flex flex-col bg-background pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-0">
       {user && (
         <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-xl border-b border-border pt-[env(safe-area-inset-top)]">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">

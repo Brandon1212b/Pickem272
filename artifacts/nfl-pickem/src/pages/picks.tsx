@@ -130,30 +130,75 @@ export default function Picks() {
   const [showH2HShare, setShowH2HShare] = useState(false);
 
   const [sharing, setSharing] = useState(false);
+  // Convert cross-origin images (team logos) to data URLs so they embed in the capture
+  const inlineImages = async (root: HTMLElement) => {
+    const imgs = Array.from(root.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map(async (img) => {
+        const src = img.src;
+        if (!src || src.startsWith("data:")) return;
+        try {
+          const res = await fetch(src, { mode: "cors" });
+          if (!res.ok) return;
+          const blob = await res.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          img.src = dataUrl;
+        } catch {
+          // leave original src if fetch fails
+        }
+      }),
+    );
+  };
+
   const handleShareImage = async () => {
-    const el = document.getElementById("h2h-share-graphic");
-    if (!el) return;
+    const el =
+      document.getElementById("h2h-share-graphic-locked") ||
+      document.getElementById("h2h-share-graphic-edit");
+    if (!el) {
+      toast.error("Share graphic not found");
+      return;
+    }
     setSharing(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(el, { backgroundColor: null, scale: 2 });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], "h2h.png", { type: "image/png" });
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: "H2H Pick'em" });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "h2h.png";
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+      // Inline logos so they survive the capture (CORS)
+      await inlineImages(el);
+      await new Promise((r) => setTimeout(r, 100));
+
+      const { toBlob } = await import("html-to-image");
+      const bg = window.getComputedStyle(el).backgroundColor || undefined;
+      const blob = await toBlob(el, {
+        backgroundColor: bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" ? bg : undefined,
+        pixelRatio: 2,
+        cacheBust: true,
       });
-    } catch (e) {
+      if (!blob || blob.size < 100) throw new Error("Generated image was empty");
+
+      const file = new File([blob], "h2h.png", { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch (shareErr: any) {
+          if (shareErr?.name === "AbortError") return;
+          console.warn("Share failed, falling back to download", shareErr);
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "h2h.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
       console.error(e);
-      toast.error("Could not generate image");
+      toast.error(e?.message || "Could not generate image");
     } finally {
       setSharing(false);
     }
@@ -1126,7 +1171,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic (available in locked view) */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic">
+          <div className="p-5 space-y-4 bg-background" id="h2h-share-graphic-locked">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
@@ -1437,7 +1482,9 @@ export default function Picks() {
               </p>
             )}
 
-            <div className="flex justify-center pt-2">
+          </div>
+
+            <div className="flex justify-center pt-2 pb-4">
               <Button
                 size="sm"
                 variant="outline"
@@ -1449,7 +1496,7 @@ export default function Picks() {
               </Button>
             </div>
 
-          </div>
+          
         </DialogContent>
       </Dialog>
     </div>
@@ -1871,7 +1918,7 @@ export default function Picks() {
       {/* Head-to-Head Share Graphic */}
       <Dialog open={showH2HShare} onOpenChange={setShowH2HShare}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 bg-background">
-          <div className="p-5 space-y-4" id="h2h-share-graphic">
+          <div className="p-5 space-y-4 bg-background" id="h2h-share-graphic-edit">
             {/* Header */}
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-black tracking-tight">
@@ -2182,7 +2229,9 @@ export default function Picks() {
               </p>
             )}
 
-            <div className="flex justify-center pt-2">
+          </div>
+
+            <div className="flex justify-center pt-2 pb-4">
               <Button
                 size="sm"
                 variant="outline"
@@ -2194,7 +2243,7 @@ export default function Picks() {
               </Button>
             </div>
 
-          </div>
+          
         </DialogContent>
       </Dialog>
     </div>

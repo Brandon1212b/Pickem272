@@ -574,15 +574,15 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const tied = byPrime.filter((u: any) => (u.primeTimeCorrect ?? 0) === top);
     const names = tied.map((u) => u.name).join(", ");
     achievements.push({
-      type: "primetime-king",
-      label: "Prime Time King",
+      type: "night-owl",
+      label: "Night Owl",
       userId: tied[0].userId,
       name: names,
       avatar: tied.length === 1 ? tied[0].avatar : null,
       value: top,
       detail: tied.length === 1
-        ? `${top} correct prime time picks (Thu/Sun night/Mon)`
-        : `Tied with ${top} correct prime time picks`,
+        ? `${top} correct TNF/SNF/MNF picks`
+        : `Tied with ${top} correct TNF/SNF/MNF picks`,
     });
   }
 

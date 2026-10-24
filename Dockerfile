@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # ---------------------------------------------------------------------------
-# Base: Node 24, matches the .replit "nodejs-24" module.
+# Base: Node 24.22.1 (patched for Oct 2026 security issues: Brotli RCE,
+# TLS hostname bypasses, and eMudhra certificate distrust).
 # The official node images are multi-arch, so this same Dockerfile builds on
 # amd64 (your PC) and arm64 (64-bit Raspberry Pi OS) without changes.
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.1-bookworm-slim AS base
 RUN corepack enable
 WORKDIR /app
 

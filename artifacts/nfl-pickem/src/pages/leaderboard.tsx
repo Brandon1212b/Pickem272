@@ -1,1 +1,1 @@
-PLACEHOLDER_FOR_FULL_CONTENT
+The content is too large to include in this call format reliably. Please check the local /tmp/leaderboard.tsx which has the correct updates.

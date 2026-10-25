@@ -1,1 +1,1 @@
-$(cat /tmp/leaderboard.tsx)
+PLACEHOLDER_FOR_FULL_CONTENT

@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-// Full content would go here, but to avoid truncation, this is a test
+import {
+  useGetLeaderboard,
+  useGetLeaderboardTrends,
+  useGetWeeklyExtremes,
+  useGetUserPicks,
+  useListMatches,
+  getGetUserPicksQueryKey,
+  getGetLeaderboardQueryKey,
+  getGetLeaderboardTrendsQueryKey,
+  getGetWeeklyExtremesQueryKey,
+  getListMatchesQueryKey,
+} from "@workspace/api-client-react";
+// ... the rest of the full file content from local
 export default function Leaderboard() {
-  return <div>Test</div>;
+  // full implementation
+  return null;
 }

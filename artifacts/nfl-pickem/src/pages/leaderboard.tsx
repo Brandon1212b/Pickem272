@@ -55,7 +55,16 @@ function getInitials(name: string): string {
 }
 
 interface SeasonRecapData {
-  achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[];
+  achievements: {
+    type: string;
+    label: string;
+    userId: number;
+    name: string;
+    avatar: string | null;
+    value: number;
+    detail: string;
+    runnersUp?: { place: number; name: string; value: number; detail: string }[];
+  }[];
   weeklyWinners: {
     week: number;
     winners: { userId: number; name: string; avatar: string | null; points: number }[];
@@ -83,6 +92,7 @@ function SeasonAwardsSection({
   loading: boolean;
   userColorMap: Record<string, string>;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
   if (loading) {
     return (
       <div className="space-y-4">
@@ -118,27 +128,59 @@ function SeasonAwardsSection({
           <CardContent className="space-y-3">
             {data.achievements.map((a, i) => {
               const isTieList = a.name.includes(",");
+              const isExpanded = expanded === a.type;
+              const hasRunners = a.runnersUp && a.runnersUp.length > 0;
               return (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
-                <div className="shrink-0">
-                  {isTieList ? (
-                    <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold">
-                      {a.name.split(",").length}
-                    </div>
-                  ) : (
-                    <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] font-bold shrink-0">{a.label}</Badge>
-                    <span className="font-semibold text-sm">{a.name}</span>
+              <div key={i}>
+                <div
+                  className={`flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50 ${hasRunners ? "cursor-pointer hover:bg-secondary/50 transition-colors" : ""}`}
+                  onClick={() => hasRunners && setExpanded(isExpanded ? null : a.type)}
+                >
+                  <div className="shrink-0">
+                    {isTieList ? (
+                      <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold">
+                        {a.name.split(",").length}
+                      </div>
+                    ) : (
+                      <AvatarBubble name={a.name} color={userColorMap[a.name] ?? a.avatar} size={36} />
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{a.detail}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] font-bold shrink-0">{a.label}</Badge>
+                      <span className="font-semibold text-sm">{a.name}</span>
+                      {hasRunners && (
+                        <span className="text-[10px] text-muted-foreground ml-1">{isExpanded ? "▲" : "▼"}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{a.detail}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-bold text-primary">{a.value}</p>
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-lg font-bold text-primary">{a.value}</p>
-                </div>
+                {isExpanded && hasRunners && (
+                  <div className="mt-2 mb-1 ml-4 mr-1">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-16 text-xs">Place</TableHead>
+                          <TableHead className="text-xs">Name</TableHead>
+                          <TableHead className="text-right text-xs">Count</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {a.runnersUp!.map((r, ri) => (
+                          <TableRow key={ri}>
+                            <TableCell className="text-xs font-medium">{r.place === 2 ? "2nd" : r.place === 3 ? "3rd" : `${r.place}th`}</TableCell>
+                            <TableCell className="text-xs">{r.name}</TableCell>
+                            <TableCell className="text-right text-xs font-semibold">{r.value}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
               );
             })}

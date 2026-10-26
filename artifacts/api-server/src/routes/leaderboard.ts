@@ -489,11 +489,60 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     (u as any).primeTimeTotal = primePicks.length;
   }
 
-  const achievements: { type: string; label: string; userId: number; name: string; avatar: string | null; value: number; detail: string }[] = [];
+  type Achievement = {
+    type: string;
+    label: string;
+    userId: number;
+    name: string;
+    avatar: string | null;
+    value: number;
+    detail: string;
+    runnersUp?: { place: number; name: string; value: number; detail: string }[];
+  };
+  const achievements: Achievement[] = [];
+  // Helper to get 2nd and 3rd place (skipping 1st place group)
+  function getRunnersUp<T>(
+    sorted: T[],
+    getValue: (item: T) => number,
+    formatName: (item: T) => string,
+    formatDetail: (item: T, value: number) => string
+  ): { place: number; name: string; value: number; detail: string }[] {
+    const result: { place: number; name: string; value: number; detail: string }[] = [];
+    if (!sorted.length) return result;
+    let i = 0;
+    let place = 1;
+    while (i < sorted.length && place <= 3) {
+      const val = getValue(sorted[i]);
+      const group: T[] = [];
+      while (i < sorted.length && getValue(sorted[i]) === val) {
+        group.push(sorted[i]);
+        i++;
+      }
+      if (place >= 2) {
+        for (const item of group) {
+          result.push({
+            place,
+            name: formatName(item),
+            value: val,
+            detail: formatDetail(item, val),
+          });
+        }
+      }
+      place++;
+    }
+    return result;
+  }
+
 
   // Most accurate picker
   const byAccuracy = [...userStats].sort((a, b) => b.correctPct - a.correctPct || b.correctCount - a.correctCount);
   if (byAccuracy[0]) {
+    const runnersUp = getRunnersUp(
+      byAccuracy,
+      (u) => u.correctPct,
+      (u) => u.name,
+      (u, v) => `${u.correctCount} correct picks — ${v}% accuracy`
+    );
     achievements.push({
       type: "most-accurate",
       label: "Sharpest Eye",
@@ -502,12 +551,19 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byAccuracy[0].avatar,
       value: byAccuracy[0].correctPct,
       detail: `${byAccuracy[0].correctCount} correct picks — ${byAccuracy[0].correctPct}% accuracy`,
+      runnersUp,
     });
   }
 
   // Most unique correct picks
   const byUnique = [...userStats].sort((a, b) => b.uniqueCorrectCount - a.uniqueCorrectCount);
   if (byUnique[0] && byUnique[0].uniqueCorrectCount > 0) {
+    const runnersUp = getRunnersUp(
+      byUnique,
+      (u) => u.uniqueCorrectCount,
+      (u) => u.name,
+      (u, v) => `${v} correct picks where less than half the league agreed`
+    );
     achievements.push({
       type: "most-unique",
       label: "Contrarian King",
@@ -516,6 +572,7 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byUnique[0].avatar,
       value: byUnique[0].uniqueCorrectCount,
       detail: `${byUnique[0].uniqueCorrectCount} correct picks where less than half the league agreed`,
+      runnersUp,
     });
   }
 
@@ -525,6 +582,12 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const top = byTeam[0].bestTeamCorrect;
     const tied = byTeam.filter((u) => u.bestTeamCorrect === top);
     const names = tied.map((u) => `${u.name} (${u.bestTeam})`).join(", ");
+    const runnersUp = getRunnersUp(
+      byTeam,
+      (u) => u.bestTeamCorrect,
+      (u) => `${u.name} (${u.bestTeam})`,
+      (u, v) => `Correctly called ${v} ${u.bestTeam} wins`
+    );
     achievements.push({
       type: "team-specialist",
       label: "Team Specialist",
@@ -535,12 +598,19 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       detail: tied.length === 1
         ? `Correctly called ${top} ${tied[0].bestTeam} wins — the most for any single team`
         : `Tied for the most correct wins on a single team (${top})`,
+      runnersUp,
     });
   }
 
   // King of the AFC
   const byAfc = [...userStats].filter((u) => u.afcResolved >= 3).sort((a, b) => b.afcPct - a.afcPct || b.afcCorrect - a.afcCorrect);
   if (byAfc[0]) {
+    const runnersUp = getRunnersUp(
+      byAfc,
+      (u) => u.afcPct,
+      (u) => u.name,
+      (u, v) => `${u.afcCorrect}/${u.afcResolved} correct on AFC games — ${v}%`
+    );
     achievements.push({
       type: "king-of-afc",
       label: "King of the AFC",
@@ -549,12 +619,19 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byAfc[0].avatar,
       value: byAfc[0].afcPct,
       detail: `${byAfc[0].afcCorrect}/${byAfc[0].afcResolved} correct on AFC games — ${byAfc[0].afcPct}%`,
+      runnersUp,
     });
   }
 
   // King of the NFC
   const byNfc = [...userStats].filter((u) => u.nfcResolved >= 3).sort((a, b) => b.nfcPct - a.nfcPct || b.nfcCorrect - a.nfcCorrect);
   if (byNfc[0]) {
+    const runnersUp = getRunnersUp(
+      byNfc,
+      (u) => u.nfcPct,
+      (u) => u.name,
+      (u, v) => `${u.nfcCorrect}/${u.nfcResolved} correct on NFC games — ${v}%`
+    );
     achievements.push({
       type: "king-of-nfc",
       label: "King of the NFC",
@@ -563,6 +640,7 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       avatar: byNfc[0].avatar,
       value: byNfc[0].nfcPct,
       detail: `${byNfc[0].nfcCorrect}/${byNfc[0].nfcResolved} correct on NFC games — ${byNfc[0].nfcPct}%`,
+      runnersUp,
     });
   }
 
@@ -573,6 +651,12 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
     const top = (byPrime[0] as any).primeTimeCorrect;
     const tied = byPrime.filter((u: any) => (u.primeTimeCorrect ?? 0) === top);
     const names = tied.map((u) => u.name).join(", ");
+    const runnersUp = getRunnersUp(
+      byPrime as any[],
+      (u: any) => u.primeTimeCorrect ?? 0,
+      (u: any) => u.name,
+      (u: any, v: number) => `${v} correct TNF/SNF/MNF picks`
+    );
     achievements.push({
       type: "mr-primetime",
       label: "Mr. Primetime",
@@ -583,6 +667,7 @@ router.get("/leaderboard/season-recap", async (_req, res) => {
       detail: tied.length === 1
         ? `${top} correct TNF/SNF/MNF picks`
         : `Tied with ${top} correct TNF/SNF/MNF picks`,
+      runnersUp,
     });
   }
 

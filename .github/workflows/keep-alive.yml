@@ -1,0 +1,44 @@
+name: Keep Render Alive
+
+# Pings the free-tier Render service every 10 minutes so it never spins down
+# (Render free web services sleep after 15 minutes of no traffic).
+# Uses the existing /api/healthz endpoint — no app code changes needed.
+
+on:
+  schedule:
+    # Every 10 minutes
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        env:
+          # Set this in repo Settings → Secrets and variables → Actions
+          # Example: https://pickem272.onrender.com
+          RENDER_URL: ${{ secrets.RENDER_URL }}
+        run: |
+          if [ -z "$RENDER_URL" ]; then
+            echo "RENDER_URL secret is not set. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+          # Strip trailing slash if present
+          BASE="${RENDER_URL%/}"
+          URL="${BASE}/api/healthz"
+
+          echo "Pinging $URL"
+          HTTP_CODE=$(curl -s -o /tmp/health-body -w "%{http_code}" --max-time 90 "$URL")
+          BODY=$(cat /tmp/health-body || true)
+
+          echo "Status: $HTTP_CODE"
+          echo "Body: $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Health check failed"
+            exit 1
+          fi
+
+          echo "OK — service is warm"
